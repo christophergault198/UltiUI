@@ -211,6 +211,20 @@
         </header>
 
         <main class="max-w-4xl mx-auto">
+            <!-- Active Alerts Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">Active Alerts</h2>
+                    <span id="alerts-count" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">No Alerts</span>
+                </div>
+                <div id="alerts-container" class="space-y-2">
+                    <!-- Alerts will be inserted here -->
+                    <div id="no-alerts-message" class="text-gray-500 text-center py-4">
+                        No active alerts
+                    </div>
+                </div>
+            </div>
+
             <!-- Camera Stream Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-4">Camera Feed</h2>
@@ -398,20 +412,6 @@
                     <div id="connection-status" class="flex items-center">
                         <div id="status-indicator" class="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
                         <span id="status-text" class="text-gray-600">Not Connected</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Alerts Section -->
-            <div class="bg-white rounded-lg shadow-md p-6 mt-8">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-semibold text-gray-800">Active Alerts</h2>
-                    <span id="alerts-count" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">No Alerts</span>
-                </div>
-                <div id="alerts-container" class="space-y-2">
-                    <!-- Alerts will be inserted here -->
-                    <div id="no-alerts-message" class="text-gray-500 text-center py-4">
-                        No active alerts
                     </div>
                 </div>
             </div>
@@ -1033,21 +1033,9 @@
             return 'info';
         }
 
-        // Create alert entry HTML
-        function createAlertEntry(timestamp, message, type, id) {
-            return `
-                <div class="alert-entry alert-${type}" data-alert-id="${id}">
-                    <div class="flex-grow">
-                        <div class="alert-message">${message}</div>
-                        <div class="alert-timestamp">${timestamp}</div>
-                    </div>
-                    <button class="alert-dismiss" onclick="dismissAlert('${id}')">&times;</button>
-                </div>
-            `;
-        }
-
         // Dismiss alert
-        function dismissAlert(alertElement) {
+        function dismissAlert(alertId) {
+            const alertElement = document.querySelector(`[data-alert-id="${alertId}"]`);
             if (alertElement) {
                 alertElement.remove();
                 updateAlertCount();
@@ -1461,7 +1449,7 @@
                     
                     // Handle calibration status
                     if (status === 'invalid') {
-                        addAlert('error', 'Extruder 0', 'Calibration is invalid - recalibration required', 'calibration-0', false);
+                        addAlert('error', 'Extruder 0', 'Calibration table is invalid - recalibration required', 'calibration-0', false);
                     } else {
                         removeAlertsByType('calibration-0');
                     }
@@ -1487,7 +1475,7 @@
                     
                     // Handle calibration status
                     if (status === 'invalid') {
-                        addAlert('error', 'Extruder 1', 'Calibration is invalid - recalibration required', 'calibration-1', false);
+                        addAlert('error', 'Extruder 1', 'Calibration table is invalid - recalibration required', 'calibration-1', false);
                     } else {
                         removeAlertsByType('calibration-1');
                     }
@@ -1679,6 +1667,7 @@
         function addAlert(type, title, message, alertType = 'general', isDismissible = true) {
             const alertsContainer = document.getElementById('alerts-container');
             const noAlertsMessage = document.getElementById('no-alerts-message');
+            const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const existingAlert = Array.from(alertsContainer.children).find(
                 alert => alert.getAttribute('data-message') === message &&
                         alert.getAttribute('data-type') === alertType
@@ -1689,6 +1678,7 @@
                 alert.className = `alert-${type} mb-2 p-4 rounded-lg relative`;
                 alert.setAttribute('data-message', message);
                 alert.setAttribute('data-type', alertType);
+                alert.setAttribute('data-alert-id', alertId);
                 
                 alert.innerHTML = `
                     <div class="flex justify-between items-start">
@@ -1696,7 +1686,7 @@
                             <h4 class="font-semibold">${title}</h4>
                             <p class="text-sm">${message}</p>
                         </div>
-                        ${isDismissible ? `<button onclick="this.closest('.alert-${type}').remove(); updateAlertCount();" class="text-lg hover:text-gray-800">&times;</button>` : ''}
+                        ${isDismissible ? `<button onclick="dismissAlert('${alertId}')" class="text-lg hover:text-gray-800">&times;</button>` : ''}
                     </div>
                 `;
                 
