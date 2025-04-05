@@ -293,68 +293,221 @@ async def get_probing_report(request):
     
     try:
         async with aiohttp.ClientSession() as session:
-            headers = {'Accept': 'application/gzip'}  # Add Accept header as shown in the curl command
-            async with session.get(f'http://{printer_ip}/api/v1/printer/diagnostics/probing_report', headers=headers) as response:
+            headers = {'Accept': 'application/gzip'}
+            url = f'http://{printer_ip}/api/v1/printer/diagnostics/probing_report'
+            print(f"Fetching probing report from: {url}")
+            
+            async with session.get(url, headers=headers) as response:
+                print(f"Response status: {response.status}")
+                print(f"Response headers: {response.headers}")
+                
                 if response.status == 200:
-                    # Read the raw data as bytes
+                    # Get filename from Content-Disposition header
+                    content_disp = response.headers.get('Content-Disposition', '')
+                    filename = 'probe_report.json'
+                    if 'filename=' in content_disp:
+                        try:
+                            filename_part = content_disp.split('filename=')[1].strip()
+                            if filename_part.startswith('"') and filename_part.endswith('"'):
+                                filename = filename_part[1:-1]
+                            else:
+                                filename = filename_part.split(';')[0].strip()
+                        except Exception:
+                            filename = 'probe_report.json'
+                    
+                    # Read the raw data
                     raw_data = await response.read()
+                    print(f"Received {len(raw_data)} bytes")
+                    
+                    # Save the file
+                    reports_dir = os.path.join('data', 'probe_reports')
+                    os.makedirs(reports_dir, exist_ok=True)
+                    file_path = os.path.join(reports_dir, filename)
+                    
+                    with open(file_path, 'wb') as f:
+                        f.write(raw_data)
+                    print(f"Saved probe report to {file_path}")
                     
                     try:
                         # Parse the JSON data
                         data = json.loads(raw_data)
+                        print("Successfully parsed JSON data")
                         
-                        # Process the probing data
-                        result = {
-                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Use current time as timestamp
-                            'measurements': [],
-                            'statistics': {
-                                'min_deviation': 0,
-                                'max_deviation': 0,
-                                'average_deviation': 0
-                            },
-                            'out_of_tolerance': False,
-                            'tolerance_threshold': 0.2  # 0.2mm tolerance threshold
-                        }
+                        # Get the most recent report (key '0')
+                        if '0' not in data:
+                            print("No recent probe report found")
+                            print(f"Available keys: {list(data.keys())}")
+                            return web.json_response({
+                                'error': 'No recent probe report found'
+                            }, status=400)
                         
-                        # Extract measurements from the data
-                        if isinstance(data, dict) and 'points' in data:
-                            result['measurements'] = [
-                                {'deviation': point.get('deviation', 0)} 
-                                for point in data['points']
-                            ]
+                        report = data['0']  # Get most recent report
+                        print("Processing most recent probe report")
+                        
+                        # Process probe points
+                        points = []
+                        z_values = []
+                        
+                        if '_ProbeReport__probe_points' in report:
+                            probe_points = report['_ProbeReport__probe_points']
                             
-                            # Calculate statistics
-                            deviations = [m['deviation'] for m in result['measurements']]
-                            if deviations:
-                                result['statistics']['min_deviation'] = min(deviations)
-                                result['statistics']['max_deviation'] = max(deviations)
-                                result['statistics']['average_deviation'] = sum(deviations) / len(deviations)
+                            for point in probe_points:
+                                try:
+                                    location = point['_ProbePoint__location']
+                                    x = location['_Vector2__x']
+                                    y = location['_Vector2__y']
+                                    z = point['_ProbePoint__z_offset_from_bed_zero']
+                                    timestamp = point['_ProbePoint__date_time']
+                                    bed_temp = point['_ProbePoint__bed_temp']
+                                    nozzle_temp = point['_ProbePoint__nozzle_temp']
+                                    
+                                    points.append([x, y])
+                                    z_values.append(z)
+                                except KeyError as e:
+                                    print(f"Error processing point: {e}")
+                                    continue
+                            
+                            if points:
+                                import numpy as np
+                                points = np.array(points)
+                                z_values = np.array(z_values)
                                 
-                                # Check if any measurements are out of tolerance
-                                max_abs_deviation = max(abs(d) for d in deviations)
-                                result['out_of_tolerance'] = max_abs_deviation > result['tolerance_threshold']
-                        
-                        return web.json_response(result)
-                    except json.JSONDecodeError:
-                        return web.json_response(
-                            {'error': 'Failed to parse probing report data'}, 
-                            status=500
-                        )
+                                # Calculate statistics
+                                z_min = float(np.min(z_values))
+                                z_max = float(np.max(z_values))
+                                z_mean = float(np.mean(z_values))
+                                z_std = float(np.std(z_values))
+                                z_variance = z_max - z_min
+                                
+                                # Analyze bed tilt
+                                x_correlation = float(np.corrcoef(points[:, 0], z_values)[0, 1])
+                                y_correlation = float(np.corrcoef(points[:, 1], z_values)[0, 1])
+                                
+                                # Find min/max point locations
+                                min_idx = np.argmin(z_values)
+                                max_idx = np.argmax(z_values)
+                                min_point = points[min_idx].tolist()
+                                max_point = points[max_idx].tolist()
+                                
+                                # Determine bed leveling status
+                                if z_variance < 0.1:
+                                    assessment = "well-leveled"
+                                    message = "Bed is well-leveled (variance < 0.1mm)"
+                                elif z_variance < 0.2:
+                                    assessment = "acceptable"
+                                    message = "Bed leveling is acceptable but could be improved"
+                                else:
+                                    assessment = "needs attention"
+                                    message = "Bed requires leveling attention (variance > 0.2mm)"
+                                
+                                # Generate recommendations
+                                recommendations = []
+                                if abs(x_correlation) > 0.3 or abs(y_correlation) > 0.3:
+                                    if abs(x_correlation) > abs(y_correlation):
+                                        if x_correlation > 0:
+                                            recommendations.append("Bed appears tilted up towards the right side - adjust right side leveling screws slightly lower")
+                                        else:
+                                            recommendations.append("Bed appears tilted up towards the left side - adjust left side leveling screws slightly lower")
+                                    else:
+                                        if y_correlation > 0:
+                                            recommendations.append("Bed appears tilted up towards the back - adjust back leveling screws slightly lower")
+                                        else:
+                                            recommendations.append("Bed appears tilted up towards the front - adjust front leveling screws slightly lower")
+                                
+                                if z_variance > 0.1:
+                                    if z_variance > 0.2:
+                                        recommendations.append("Perform a complete bed leveling procedure")
+                                        recommendations.append("Focus on the areas with extreme values first")
+                                    else:
+                                        recommendations.append("Fine-tune the leveling near the highest and lowest points")
+                                
+                                if z_std > 0.1:
+                                    recommendations.append("Check for debris or buildup on the bed surface")
+                                    recommendations.append("Consider cleaning the bed with IPA")
+                                
+                                result = {
+                                    'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    'file_path': file_path,
+                                    'file_size': len(raw_data),
+                                    'measurements': [
+                                        {
+                                            'x': float(point[0]),
+                                            'y': float(point[1]),
+                                            'height': float(z),
+                                            'deviation': float(z - z_mean)
+                                        }
+                                        for point, z in zip(points, z_values)
+                                    ],
+                                    'statistics': {
+                                        'min_height': z_min,
+                                        'max_height': z_max,
+                                        'avg_height': z_mean,
+                                        'std_deviation': z_std,
+                                        'max_deviation': z_variance,
+                                        'point_count': len(points)
+                                    },
+                                    'analysis': {
+                                        'assessment': assessment,
+                                        'message': message,
+                                        'recommendations': recommendations,
+                                        'min_point': {
+                                            'x': float(min_point[0]),
+                                            'y': float(min_point[1]),
+                                            'z': float(z_min)
+                                        },
+                                        'max_point': {
+                                            'x': float(max_point[0]),
+                                            'y': float(max_point[1]),
+                                            'z': float(z_max)
+                                        },
+                                        'correlations': {
+                                            'x_tilt': x_correlation,
+                                            'y_tilt': y_correlation
+                                        }
+                                    },
+                                    'temperatures': {
+                                        'bed': bed_temp,
+                                        'nozzle': nozzle_temp
+                                    },
+                                    'tolerance_threshold': 0.1,  # 0.1mm tolerance for visualization
+                                    'out_of_tolerance': z_variance >= 0.2
+                                }
+                                
+                                print(f"Processed {len(points)} probe points")
+                                print(f"Analysis: {assessment} (variance: {z_variance:.3f}mm)")
+                                
+                                return web.json_response(result)
+                            else:
+                                return web.json_response({
+                                    'error': 'No valid probe points found in data'
+                                }, status=400)
+                        else:
+                            print("No probe points found in report")
+                            print(f"Available keys in report: {list(report.keys())}")
+                            return web.json_response({
+                                'error': 'Invalid probing report format - no probe points found'
+                            }, status=400)
+                    except Exception as e:
+                        print(f"Error processing probe report: {e}")
+                        return web.json_response({
+                            'error': 'Failed to process probe report',
+                            'details': str(e),
+                            'file_path': file_path,
+                            'file_size': len(raw_data)
+                        }, status=500)
                 elif response.status == 204:
-                    return web.json_response(
-                        {'error': 'No probing report available'}, 
-                        status=204
-                    )
+                    return web.json_response({
+                        'error': 'No probing report available'
+                    }, status=204)
                 else:
-                    return web.json_response(
-                        {'error': f'Failed to fetch probing report: {response.status}'}, 
-                        status=response.status
-                    )
+                    return web.json_response({
+                        'error': f'Failed to fetch probing report: {response.status}'
+                    }, status=response.status)
     except Exception as e:
-        return web.json_response(
-            {'error': f'Failed to fetch probing report: {str(e)}'}, 
-            status=500
-        )
+        print(f"Error: {str(e)}")
+        return web.json_response({
+            'error': f'Failed to fetch probing report: {str(e)}'
+        }, status=500)
 
 async def get_config(request):
     """Get current configuration"""

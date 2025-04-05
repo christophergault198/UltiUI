@@ -2,4 +2,8 @@ aiohttp==3.9.3
 aiohttp-cors==0.7.0
 python-dotenv==1.0.1
 aiodns==3.1.1
-cchardet==2.1.7 
+#cchardet==2.1.7
+numpy>=1.24.0
+matplotlib>=3.7.0
+PySide6>=6.5.0
+PyQt6>=6.5.0  # Alternative to PySide6 if needed 
