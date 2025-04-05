@@ -485,21 +485,20 @@
         </header>
 
         <main class="max-w-4xl mx-auto">
-            <!-- Active Alerts Section -->
+            <!-- 1. Active Alerts Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-2xl font-semibold text-gray-800">Active Alerts</h2>
                     <span id="alerts-count" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">No Alerts</span>
                 </div>
                 <div id="alerts-container" class="space-y-2">
-                    <!-- Alerts will be inserted here -->
                     <div id="no-alerts-message" class="text-gray-500 text-center py-4">
                         No active alerts
                     </div>
                 </div>
             </div>
 
-            <!-- Camera Stream Section -->
+            <!-- 2. Camera Stream Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-4">Camera Feed</h2>
                 <div class="camera-container">
@@ -510,7 +509,7 @@
                 </div>
             </div>
 
-            <!-- Current Job Section -->
+            <!-- 3. Current Job Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-semibold text-gray-800">Current Job</h2>
@@ -565,7 +564,7 @@
                 </div>
             </div>
 
-            <!-- Printer Stats Section -->
+            <!-- 4. Printer Status Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-semibold text-gray-800">Printer Status</h2>
@@ -661,51 +660,65 @@
                 </div>
             </div>
 
-            <!-- Configuration Section -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Printer Configuration</h2>
-                
-                <div class="mb-6">
-                    <label for="printer-ip" class="block text-sm font-medium text-gray-700 mb-2">
-                        Printer IP Address
-                    </label>
-                    <div class="flex gap-4">
-                        <input type="text" 
-                               id="printer-ip" 
-                               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                               placeholder="Enter printer IP address (e.g., 192.168.1.100)">
-                        <button onclick="saveConfig()" 
-                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            Save
-                        </button>
+            <!-- 5. Material Manager Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Material Manager</h2>
+                    <div class="flex items-center space-x-4">
+                        <label for="spool-size" class="text-sm text-gray-600">Spool Size (kg):</label>
+                        <input type="number" id="spool-size" class="w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" value="1.0" min="0.1" step="0.1">
                     </div>
                 </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Extruder 0 Material -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 0 Material</h3>
+                            <span id="ext0-material-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Remaining Length</span>
+                                    <span id="ext0-material-length" class="text-sm font-medium">-- mm</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext0-material-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500" id="ext0-material-updated">Last updated: --</span>
+                                <span class="text-xs text-gray-500" id="ext0-material-weight">-- kg</span>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="border-t pt-6">
-                    <h3 class="text-lg font-medium text-gray-800 mb-4">Connection Status</h3>
-                    <div id="connection-status" class="flex items-center">
-                        <div id="status-indicator" class="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
-                        <span id="status-text" class="text-gray-600">Not Connected</span>
+                    <!-- Extruder 1 Material -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 1 Material</h3>
+                            <span id="ext1-material-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Remaining Length</span>
+                                    <span id="ext1-material-length" class="text-sm font-medium">-- mm</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext1-material-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500" id="ext1-material-updated">Last updated: --</span>
+                                <span class="text-xs text-gray-500" id="ext1-material-weight">-- kg</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- System Log Section -->
-            <div class="bg-white rounded-lg shadow-md p-6 mt-8">
-                <button type="button" class="collapsible flex items-center justify-between">
-                    <div class="flex items-center">
-                        <h2 class="text-2xl font-semibold text-gray-800">System Log</h2>
-                        <span id="log-status" class="ml-4 px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">Idle</span>
-                    </div>
-                </button>
-                <div class="collapsible-content">
-                    <div id="log-container" class="log-container mt-4">
-                        <!-- Log entries will be inserted here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Flow Section -->
+            <!-- 6. Active Flow Monitor Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-semibold text-gray-800">Active Flow Monitor</h2>
@@ -791,65 +804,7 @@
                 </div>
             </div>
 
-            <!-- Material Manager Section -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-800">Material Manager</h2>
-                    <div class="flex items-center space-x-4">
-                        <label for="spool-size" class="text-sm text-gray-600">Spool Size (kg):</label>
-                        <input type="number" id="spool-size" class="w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" value="1.0" min="0.1" step="0.1">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Extruder 0 Material -->
-                    <div class="stat-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-medium text-gray-800">Extruder 0 Material</h3>
-                            <span id="ext0-material-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
-                        </div>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between mb-1">
-                                    <span class="text-sm text-gray-600">Remaining Length</span>
-                                    <span id="ext0-material-length" class="text-sm font-medium">-- mm</span>
-                                </div>
-                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div id="ext0-material-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-xs text-gray-500" id="ext0-material-updated">Last updated: --</span>
-                                <span class="text-xs text-gray-500" id="ext0-material-weight">-- kg</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Extruder 1 Material -->
-                    <div class="stat-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-medium text-gray-800">Extruder 1 Material</h3>
-                            <span id="ext1-material-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
-                        </div>
-                        <div class="space-y-4">
-                            <div>
-                                <div class="flex justify-between mb-1">
-                                    <span class="text-sm text-gray-600">Remaining Length</span>
-                                    <span id="ext1-material-length" class="text-sm font-medium">-- mm</span>
-                                </div>
-                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div id="ext1-material-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-xs text-gray-500" id="ext1-material-updated">Last updated: --</span>
-                                <span class="text-xs text-gray-500" id="ext1-material-weight">-- kg</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Toolhead Calibration Section -->
+            <!-- 7. Toolhead Calibration Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-6">Toolhead Calibration</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -903,7 +858,7 @@
                 </div>
             </div>
 
-            <!-- Bed Leveling Status Section -->
+            <!-- 8. Bed Leveling Status Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-6">Bed Leveling Status</h2>
                 <div class="grid grid-cols-1 gap-6">
@@ -970,6 +925,50 @@
                         <div id="bed-visualization" class="grid grid-cols-5 gap-2 aspect-square">
                             <!-- Grid points will be inserted here -->
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. System Log Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <button type="button" class="collapsible flex items-center justify-between">
+                    <div class="flex items-center">
+                        <h2 class="text-2xl font-semibold text-gray-800">System Log</h2>
+                        <span id="log-status" class="ml-4 px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">Idle</span>
+                    </div>
+                </button>
+                <div class="collapsible-content">
+                    <div id="log-container" class="log-container mt-4">
+                        <!-- Log entries will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 10. Printer Configuration Section -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Printer Configuration</h2>
+                
+                <div class="mb-6">
+                    <label for="printer-ip" class="block text-sm font-medium text-gray-700 mb-2">
+                        Printer IP Address
+                    </label>
+                    <div class="flex gap-4">
+                        <input type="text" 
+                               id="printer-ip" 
+                               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                               placeholder="Enter printer IP address (e.g., 192.168.1.100)">
+                        <button onclick="saveConfig()" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Save
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4">Connection Status</h3>
+                    <div id="connection-status" class="flex items-center">
+                        <div id="status-indicator" class="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+                        <span id="status-text" class="text-gray-600">Not Connected</span>
                     </div>
                 </div>
             </div>
