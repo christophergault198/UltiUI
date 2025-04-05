@@ -1322,7 +1322,7 @@
                 return 'error';
             } else if (message.includes('WAR') || lowerMessage.includes('attention')) {
                 return 'warning';
-            } else if (lowerMessage.includes('systemservice') && lowerMessage.includes('scheduling next check')) {
+            } else if (message.includes('INF -') || (lowerMessage.includes('systemservice') && lowerMessage.includes('scheduling next check'))) {
                 return 'info';
             }
             return 'info';
@@ -1379,11 +1379,13 @@
                 }
             }
 
-            // Check for other important messages
+            // Check for INF logs and other important messages
             const isImportant = 
                 lowerMessage.includes('error') ||
-                log.message.includes('WAR') ||  // Changed to look for exact "WAR" match
+                log.message.includes('WAR') ||
+                //log.message.includes('INF -') ||  // Add check for INF logs
                 lowerMessage.includes('failed') ||
+                lowerMessage.includes('NetworkService') ||
                 lowerMessage.includes('critical') ||
                 lowerMessage.includes('attention') ||
                 (lowerMessage.includes('temperature') && lowerMessage.includes('not'));
@@ -1392,8 +1394,8 @@
                 const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 const alertType = getAlertType(log.message);
                 
-                // For warning messages, always add them as new alerts
-                if (alertType === 'warning') {
+                // For warning and info messages, always add them as new alerts
+                if (alertType === 'warning' || alertType === 'info') {
                     activeAlerts.set(alertId, {
                         timestamp: log.timestamp,
                         message: log.message,
