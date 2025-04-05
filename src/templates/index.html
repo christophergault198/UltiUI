@@ -486,6 +486,64 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Material Manager Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Material Manager</h2>
+                    <div class="flex items-center space-x-4">
+                        <label for="spool-size" class="text-sm text-gray-600">Spool Size (kg):</label>
+                        <input type="number" id="spool-size" class="w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" value="1.0" min="0.1" step="0.1">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Extruder 0 Material -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 0 Material</h3>
+                            <span id="ext0-material-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Remaining Length</span>
+                                    <span id="ext0-material-length" class="text-sm font-medium">-- mm</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext0-material-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500" id="ext0-material-updated">Last updated: --</span>
+                                <span class="text-xs text-gray-500" id="ext0-material-weight">-- kg</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Extruder 1 Material -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 1 Material</h3>
+                            <span id="ext1-material-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Remaining Length</span>
+                                    <span id="ext1-material-length" class="text-sm font-medium">-- mm</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext1-material-bar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500" id="ext1-material-updated">Last updated: --</span>
+                                <span class="text-xs text-gray-500" id="ext1-material-weight">-- kg</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -989,6 +1047,74 @@
             }
         }
 
+        let materialInterval;
+        // For 2.85mm filament:
+        // Cross-sectional area = π * (2.85/2)^2 = 6.379 mm²
+        // For PLA (density ~1.24 g/cm³):
+        // 1 meter = 6.379 mm² * 1000 mm * 1.24 g/cm³ * (1/1000) cm³/mm³ = ~7.91g
+        // So 1kg = ~126.4 meters = 126,400mm
+        const MM_PER_KG = 126400; // mm of 2.85mm filament per kg
+
+        // Update material remaining data
+        async function updateMaterialRemaining() {
+            try {
+                const response = await fetch('/api/material-remaining');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const spoolSize = parseFloat(document.getElementById('spool-size').value) || 1.0;
+                
+                // Update Extruder 0
+                const ext0Data = data.extruder0;
+                if (ext0Data.error) {
+                    document.getElementById('ext0-material-status').textContent = 'Error';
+                    document.getElementById('ext0-material-status').className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+                    document.getElementById('ext0-material-length').textContent = '-- mm';
+                    document.getElementById('ext0-material-bar').style.width = '0%';
+                    document.getElementById('ext0-material-updated').textContent = `Last updated: ${ext0Data.timestamp}`;
+                    document.getElementById('ext0-material-weight').textContent = '-- kg';
+                } else {
+                    const length = ext0Data.length_remaining;
+                    const weight = (length / MM_PER_KG).toFixed(3); // Show 3 decimal places for more precise weight
+                    document.getElementById('ext0-material-status').textContent = length > 0 ? 'Loaded' : 'Empty';
+                    document.getElementById('ext0-material-status').className = `px-2 py-1 text-xs rounded-full ${length > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`;
+                    document.getElementById('ext0-material-length').textContent = `${length.toFixed(1)} mm`;
+                    document.getElementById('ext0-material-bar').style.width = `${(length / (spoolSize * MM_PER_KG)) * 100}%`;
+                    document.getElementById('ext0-material-updated').textContent = `Last updated: ${ext0Data.timestamp}`;
+                    document.getElementById('ext0-material-weight').textContent = `${weight} kg`;
+                }
+                
+                // Update Extruder 1
+                const ext1Data = data.extruder1;
+                if (ext1Data.error) {
+                    document.getElementById('ext1-material-status').textContent = 'Error';
+                    document.getElementById('ext1-material-status').className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+                    document.getElementById('ext1-material-length').textContent = '-- mm';
+                    document.getElementById('ext1-material-bar').style.width = '0%';
+                    document.getElementById('ext1-material-updated').textContent = `Last updated: ${ext1Data.timestamp}`;
+                    document.getElementById('ext1-material-weight').textContent = '-- kg';
+                } else {
+                    const length = ext1Data.length_remaining;
+                    const weight = (length / MM_PER_KG).toFixed(3); // Show 3 decimal places for more precise weight
+                    document.getElementById('ext1-material-status').textContent = length > 0 ? 'Loaded' : 'Empty';
+                    document.getElementById('ext1-material-status').className = `px-2 py-1 text-xs rounded-full ${length > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`;
+                    document.getElementById('ext1-material-length').textContent = `${length.toFixed(1)} mm`;
+                    document.getElementById('ext1-material-bar').style.width = `${(length / (spoolSize * MM_PER_KG)) * 100}%`;
+                    document.getElementById('ext1-material-updated').textContent = `Last updated: ${ext1Data.timestamp}`;
+                    document.getElementById('ext1-material-weight').textContent = `${weight} kg`;
+                }
+
+            } catch (error) {
+                console.error('Error updating material data:', error);
+            }
+        }
+
+        // Add spool size change handler
+        document.getElementById('spool-size').addEventListener('change', updateMaterialRemaining);
+
         // Initialize collapsible sections
         document.addEventListener('DOMContentLoaded', () => {
             const coll = document.getElementsByClassName("collapsible");
@@ -1017,6 +1143,8 @@
             logInterval = setInterval(updateSystemLog, 1000);
             updateFlowData();
             flowInterval = setInterval(updateFlowData, 1000);
+            updateMaterialRemaining();
+            materialInterval = setInterval(updateMaterialRemaining, 1000);
         });
 
         // Cleanup intervals when page is unloaded
@@ -1026,6 +1154,7 @@
             clearInterval(printCoresInterval);
             clearInterval(logInterval);
             clearInterval(flowInterval);
+            clearInterval(materialInterval);
         });
     </script>
 </body>

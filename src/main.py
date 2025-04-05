@@ -223,6 +223,40 @@ async def get_flow_data(request):
             status=500
         )
 
+@routes.get('/api/material-remaining')
+async def get_material_remaining(request):
+    printer_ip = os.getenv('PRINTER_IP')
+    if not printer_ip:
+        return web.json_response({'error': 'Printer IP not configured'}, status=400)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Fetch data for both extruders
+            results = {}
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            for extruder in [0, 1]:
+                url = f'http://{printer_ip}/api/v1/printer/heads/0/extruders/{extruder}/active_material/length_remaining'
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        length = await response.json()
+                        results[f'extruder{extruder}'] = {
+                            'length_remaining': length,
+                            'timestamp': timestamp
+                        }
+                    else:
+                        results[f'extruder{extruder}'] = {
+                            'error': f'Failed to fetch data: {response.status}',
+                            'timestamp': timestamp
+                        }
+            
+            return web.json_response(results)
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch material data: {str(e)}'}, 
+            status=500
+        )
+
 async def get_config(request):
     """Get current configuration"""
     return web.json_response(config)
@@ -320,6 +354,7 @@ def init_app():
     app.router.add_get('/api/print-cores', get_print_cores)
     app.router.add_get('/api/system-log', get_system_log)
     app.router.add_get('/api/flow-data/{samples}', get_flow_data)
+    app.router.add_get('/api/material-remaining', get_material_remaining)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
