@@ -188,6 +188,19 @@
             padding: 0.75rem 1rem;
             border-bottom: 1px solid #2d2d2d;
         }
+        #bed-visualization {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+            aspect-ratio: 1;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 0.5rem;
+        }
+        #bed-visualization > div {
+            min-height: 4rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -616,12 +629,12 @@
                 </div>
             </div>
 
-            <!-- Probing Report Section -->
+            <!-- Bed Leveling Status Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <h2 class="text-2xl font-semibold text-gray-800 mb-6">Bed Leveling Status</h2>
                 <div class="grid grid-cols-1 gap-6">
                     <!-- Status Overview -->
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center space-x-4">
                             <span id="probing-status" class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-800">Loading...</span>
                             <span id="probing-timestamp" class="text-sm text-gray-600"></span>
@@ -632,25 +645,52 @@
                     </div>
 
                     <!-- Statistics -->
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-3 gap-4 mb-6">
                         <div class="stat-card p-4">
                             <div class="text-sm text-gray-600">Min Deviation</div>
-                            <div id="min-deviation" class="text-xl font-semibold">--</div>
+                            <div id="min-deviation" class="text-xl font-semibold">0.000 mm</div>
                         </div>
                         <div class="stat-card p-4">
                             <div class="text-sm text-gray-600">Max Deviation</div>
-                            <div id="max-deviation" class="text-xl font-semibold">--</div>
+                            <div id="max-deviation" class="text-xl font-semibold">0.000 mm</div>
                         </div>
                         <div class="stat-card p-4">
                             <div class="text-sm text-gray-600">Average Deviation</div>
-                            <div id="avg-deviation" class="text-xl font-semibold">--</div>
+                            <div id="avg-deviation" class="text-xl font-semibold">0.000 mm</div>
                         </div>
                     </div>
 
-                    <!-- Measurement Grid -->
-                    <div class="overflow-x-auto">
-                        <div id="measurement-grid" class="grid grid-cols-3 gap-2">
-                            <!-- Measurement points will be added here -->
+                    <!-- Analysis Summary -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                        <h3 class="text-lg font-medium text-gray-800 mb-2">Analysis</h3>
+                        <div id="analysis-text" class="text-sm text-gray-600">
+                            Loading analysis...
+                        </div>
+                    </div>
+
+                    <!-- Bed Level Visualization -->
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-lg font-medium text-gray-800">Bed Level Visualization</h3>
+                                <div class="flex items-center space-x-2">
+                                    <div class="flex items-center">
+                                        <div class="w-4 h-4 bg-blue-500 rounded mr-1"></div>
+                                        <span class="text-sm">Low</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-4 h-4 bg-green-500 rounded mr-1"></div>
+                                        <span class="text-sm">Level</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-4 h-4 bg-red-500 rounded mr-1"></div>
+                                        <span class="text-sm">High</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="bed-visualization" class="grid grid-cols-5 gap-2 aspect-square">
+                            <!-- Grid points will be inserted here -->
                         </div>
                     </div>
                 </div>
@@ -1330,9 +1370,10 @@
 
         // Initialize collapsible sections
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize all collapsible elements
             const coll = document.getElementsByClassName("collapsible");
-            for (const element of coll) {
-                element.addEventListener("click", function() {
+            for (let i = 0; i < coll.length; i++) {
+                coll[i].addEventListener("click", function() {
                     this.classList.toggle("active");
                     const content = this.nextElementSibling;
                     if (content.style.maxHeight) {
@@ -1350,6 +1391,7 @@
             updatePrintJob();
             updatePrintCores();
             updateSystemLog();
+            updateProbingReport();  // Initial update only
             statsInterval = setInterval(updatePrinterStats, 1000);
             jobInterval = setInterval(updatePrintJob, 1000);
             printCoresInterval = setInterval(updatePrintCores, 1000);
@@ -1478,6 +1520,7 @@
                 }
                 
                 const data = await response.json();
+                console.log('Received probe data:', data);  // Debug log
                 
                 // Update timestamp
                 const timestamp = new Date(data.timestamp).toLocaleString();
@@ -1488,40 +1531,146 @@
                 if (data.out_of_tolerance) {
                     statusElement.textContent = 'Out of Tolerance';
                     statusElement.className = 'px-3 py-1 text-sm rounded-full bg-red-100 text-red-800';
-                    
-                    // Add to active alerts
-                    addAlert('error', 'Bed Leveling Error', `Bed leveling is out of tolerance. Max deviation: ${data.statistics.max_deviation.toFixed(3)}mm`, 'bed-leveling');
+                    addAlert('error', 'Bed Leveling', 'Bed leveling is out of tolerance', 'bed-leveling', false);
                 } else {
                     statusElement.textContent = 'Within Tolerance';
                     statusElement.className = 'px-3 py-1 text-sm rounded-full bg-green-100 text-green-800';
-                    
-                    // Remove bed leveling alert if it exists
                     removeAlertsByType('bed-leveling');
                 }
                 
                 // Update statistics
-                document.getElementById('min-deviation').textContent = `${data.statistics.min_deviation.toFixed(3)} mm`;
-                document.getElementById('max-deviation').textContent = `${data.statistics.max_deviation.toFixed(3)} mm`;
-                document.getElementById('avg-deviation').textContent = `${data.statistics.average_deviation.toFixed(3)} mm`;
+                if (data.statistics) {
+                    console.log('Updating statistics:', data.statistics);  // Debug log
+                    document.getElementById('min-deviation').textContent = `${data.statistics.min_height.toFixed(3)} mm`;
+                    document.getElementById('max-deviation').textContent = `${data.statistics.max_height.toFixed(3)} mm`;
+                    document.getElementById('avg-deviation').textContent = `${data.statistics.avg_height.toFixed(3)} mm`;
+                }
                 
-                // Update measurement grid
-                const grid = document.getElementById('measurement-grid');
-                grid.innerHTML = ''; // Clear existing measurements
-                
-                data.measurements.forEach((measurement, index) => {
-                    const point = document.createElement('div');
-                    point.className = `p-3 rounded ${Math.abs(measurement.deviation) > data.tolerance_threshold ? 'bg-red-100' : 'bg-green-100'}`;
-                    point.innerHTML = `
-                        <div class="text-xs text-gray-600">Point ${index + 1}</div>
-                        <div class="font-medium">${measurement.deviation.toFixed(3)} mm</div>
+                // Update analysis text
+                if (data.analysis) {
+                    console.log('Updating analysis:', data.analysis);  // Debug log
+                    const analysisHtml = `
+                        <div class="space-y-2">
+                            <p><strong>Status:</strong> <span class="${getAssessmentClass(data.analysis.assessment)}">${data.analysis.assessment}</span></p>
+                            <p><strong>Message:</strong> ${data.analysis.message}</p>
+                            <p><strong>Point Count:</strong> ${data.statistics.point_count}</p>
+                            <p><strong>Max Deviation:</strong> ${data.statistics.max_deviation.toFixed(3)} mm</p>
+                            <div class="mt-2">
+                                <strong>Recommendations:</strong>
+                                <ul class="list-disc pl-4 mt-1">
+                                    ${data.analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
                     `;
-                    grid.appendChild(point);
-                });
+                    document.getElementById('analysis-text').innerHTML = analysisHtml;
+                } else {
+                    document.getElementById('analysis-text').textContent = 'Analysis data not available';
+                }
+                
+                // Update bed visualization
+                if (data.measurements && data.measurements.length > 0) {
+                    console.log('Updating visualization with measurements:', data.measurements);  // Debug log
+                    
+                    // Get grid dimensions from measurements
+                    const uniqueX = [...new Set(data.measurements.map(p => p.x))].sort((a, b) => a - b);
+                    const uniqueY = [...new Set(data.measurements.map(p => p.y))].sort((a, b) => b - a);  // Descending for Y
+                    const gridCols = uniqueX.length;
+                    const gridRows = uniqueY.length;
+                    
+                    // Update grid layout
+                    const visualization = document.getElementById('bed-visualization');
+                    visualization.style.gridTemplateColumns = `repeat(${gridCols}, 1fr)`;
+                    visualization.innerHTML = ''; // Clear existing points
+                    
+                    // Create grid points
+                    for (let y of uniqueY) {
+                        for (let x of uniqueX) {
+                            const point = data.measurements.find(p => p.x === x && p.y === y);
+                            const pointElement = document.createElement('div');
+                            pointElement.className = 'aspect-square rounded-lg flex flex-col items-center justify-center p-2 text-white text-center';
+                            
+                            if (point) {
+                                const deviation = point.deviation;
+                                const tolerance = data.tolerance_threshold;
+                                
+                                // Determine color based on deviation
+                                let backgroundColor;
+                                if (Math.abs(deviation) <= tolerance) {
+                                    backgroundColor = 'bg-green-500';
+                                } else if (deviation < 0) {
+                                    backgroundColor = 'bg-blue-500';
+                                } else {
+                                    backgroundColor = 'bg-red-500';
+                                }
+                                
+                                pointElement.className += ` ${backgroundColor}`;
+                                pointElement.innerHTML = `
+                                    <div class="text-xs font-medium">${deviation.toFixed(3)}</div>
+                                    <div class="text-xs opacity-75">${x.toFixed(0)},${y.toFixed(0)}</div>
+                                `;
+                            } else {
+                                // Empty grid point
+                                pointElement.className += ' bg-gray-200';
+                                pointElement.innerHTML = `
+                                    <div class="text-xs text-gray-500">No Data</div>
+                                    <div class="text-xs opacity-75">${x.toFixed(0)},${y.toFixed(0)}</div>
+                                `;
+                            }
+                            
+                            visualization.appendChild(pointElement);
+                        }
+                    }
+                } else {
+                    console.log('No measurement data available');  // Debug log
+                    const visualization = document.getElementById('bed-visualization');
+                    visualization.innerHTML = '<div class="col-span-5 text-center text-gray-500 py-8">No measurement data available</div>';
+                }
                 
             } catch (error) {
                 console.error('Error updating probing report:', error);
-                // Add error to active alerts
-                addAlert('error', 'Probing Report Error', 'Failed to fetch bed leveling data', 'bed-leveling');
+                // Update status to show error
+                const statusElement = document.getElementById('probing-status');
+                statusElement.textContent = 'Error';
+                statusElement.className = 'px-3 py-1 text-sm rounded-full bg-red-100 text-red-800';
+                
+                // Clear visualization
+                const visualization = document.getElementById('bed-visualization');
+                visualization.innerHTML = '<div class="col-span-5 text-center text-red-500 py-8">Error loading bed leveling data</div>';
+                
+                // Show error in statistics
+                document.getElementById('min-deviation').textContent = '-.--- mm';
+                document.getElementById('max-deviation').textContent = '-.--- mm';
+                document.getElementById('avg-deviation').textContent = '-.--- mm';
+                document.getElementById('analysis-text').textContent = 'Error fetching bed leveling data';
+                
+                addAlert('error', 'Bed Leveling', 'Failed to fetch bed leveling data', 'bed-leveling');
+            }
+        }
+
+        function getAssessmentClass(assessment) {
+            switch (assessment) {
+                case 'well-leveled':
+                    return 'text-green-600 font-medium';
+                case 'acceptable':
+                    return 'text-yellow-600 font-medium';
+                case 'needs attention':
+                    return 'text-red-600 font-medium';
+                default:
+                    return 'text-gray-600';
+            }
+        }
+
+        function getRecommendationClass(assessment) {
+            switch (assessment) {
+                case 'well-leveled':
+                    return 'text-green-600';
+                case 'acceptable':
+                    return 'text-yellow-600';
+                case 'needs attention':
+                    return 'text-red-600';
+                default:
+                    return 'text-gray-600';
             }
         }
 
