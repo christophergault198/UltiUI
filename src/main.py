@@ -285,6 +285,77 @@ async def get_toolhead_calibration(request):
             status=500
         )
 
+@routes.get('/api/probing-report')
+async def get_probing_report(request):
+    printer_ip = os.getenv('PRINTER_IP')
+    if not printer_ip:
+        return web.json_response({'error': 'Printer IP not configured'}, status=400)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {'Accept': 'application/gzip'}  # Add Accept header as shown in the curl command
+            async with session.get(f'http://{printer_ip}/api/v1/printer/diagnostics/probing_report', headers=headers) as response:
+                if response.status == 200:
+                    # Read the raw data as bytes
+                    raw_data = await response.read()
+                    
+                    try:
+                        # Parse the JSON data
+                        data = json.loads(raw_data)
+                        
+                        # Process the probing data
+                        result = {
+                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Use current time as timestamp
+                            'measurements': [],
+                            'statistics': {
+                                'min_deviation': 0,
+                                'max_deviation': 0,
+                                'average_deviation': 0
+                            },
+                            'out_of_tolerance': False,
+                            'tolerance_threshold': 0.2  # 0.2mm tolerance threshold
+                        }
+                        
+                        # Extract measurements from the data
+                        if isinstance(data, dict) and 'points' in data:
+                            result['measurements'] = [
+                                {'deviation': point.get('deviation', 0)} 
+                                for point in data['points']
+                            ]
+                            
+                            # Calculate statistics
+                            deviations = [m['deviation'] for m in result['measurements']]
+                            if deviations:
+                                result['statistics']['min_deviation'] = min(deviations)
+                                result['statistics']['max_deviation'] = max(deviations)
+                                result['statistics']['average_deviation'] = sum(deviations) / len(deviations)
+                                
+                                # Check if any measurements are out of tolerance
+                                max_abs_deviation = max(abs(d) for d in deviations)
+                                result['out_of_tolerance'] = max_abs_deviation > result['tolerance_threshold']
+                        
+                        return web.json_response(result)
+                    except json.JSONDecodeError:
+                        return web.json_response(
+                            {'error': 'Failed to parse probing report data'}, 
+                            status=500
+                        )
+                elif response.status == 204:
+                    return web.json_response(
+                        {'error': 'No probing report available'}, 
+                        status=204
+                    )
+                else:
+                    return web.json_response(
+                        {'error': f'Failed to fetch probing report: {response.status}'}, 
+                        status=response.status
+                    )
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch probing report: {str(e)}'}, 
+            status=500
+        )
+
 async def get_config(request):
     """Get current configuration"""
     return web.json_response(config)
@@ -384,6 +455,7 @@ def init_app():
     app.router.add_get('/api/flow-data/{samples}', get_flow_data)
     app.router.add_get('/api/material-remaining', get_material_remaining)
     app.router.add_get('/api/toolhead-calibration', get_toolhead_calibration)
+    app.router.add_get('/api/probing-report', get_probing_report)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes

@@ -393,7 +393,12 @@
             <div class="bg-white rounded-lg shadow-md p-6 mt-8">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-2xl font-semibold text-gray-800">Active Alerts</h2>
-                    <span id="alerts-count" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">0 Active</span>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="testAlerts()" class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                            Test Alerts
+                        </button>
+                        <span id="alerts-count" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">No Alerts</span>
+                    </div>
                 </div>
                 <div id="alerts-container" class="space-y-2">
                     <!-- Alerts will be inserted here -->
@@ -611,6 +616,46 @@
                                     <div id="ext1-z-offset" class="font-medium">-- mm</div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Probing Report Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Bed Leveling Status</h2>
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- Status Overview -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <span id="probing-status" class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-800">Loading...</span>
+                            <span id="probing-timestamp" class="text-sm text-gray-600"></span>
+                        </div>
+                        <button onclick="updateProbingReport()" class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                            Refresh
+                        </button>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="stat-card p-4">
+                            <div class="text-sm text-gray-600">Min Deviation</div>
+                            <div id="min-deviation" class="text-xl font-semibold">--</div>
+                        </div>
+                        <div class="stat-card p-4">
+                            <div class="text-sm text-gray-600">Max Deviation</div>
+                            <div id="max-deviation" class="text-xl font-semibold">--</div>
+                        </div>
+                        <div class="stat-card p-4">
+                            <div class="text-sm text-gray-600">Average Deviation</div>
+                            <div id="avg-deviation" class="text-xl font-semibold">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Measurement Grid -->
+                    <div class="overflow-x-auto">
+                        <div id="measurement-grid" class="grid grid-cols-3 gap-2">
+                            <!-- Measurement points will be added here -->
                         </div>
                     </div>
                 </div>
@@ -963,27 +1008,33 @@
         }
 
         // Dismiss alert
-        function dismissAlert(id) {
-            const alertElement = document.querySelector(`[data-alert-id="${id}"]`);
+        function dismissAlert(alertElement) {
             if (alertElement) {
                 alertElement.remove();
-                activeAlerts.delete(id);
-                updateAlertsCount();
+                updateAlertCount();
             }
         }
 
         // Update alerts count badge
-        function updateAlertsCount() {
-            const count = activeAlerts.size;
-            const alertsCount = document.getElementById('alerts-count');
+        function updateAlertCount() {
+            const alertsContainer = document.getElementById('alerts-container');
             const noAlertsMessage = document.getElementById('no-alerts-message');
+            const countBadge = document.getElementById('alerts-count');
             
-            alertsCount.textContent = `${count} Active`;
-            alertsCount.className = `px-3 py-1 rounded-full text-sm font-medium ${
-                count > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-            }`;
+            // Count actual alerts (excluding the "no alerts" message)
+            const alerts = alertsContainer.querySelectorAll('.alert-error, .alert-warning, .alert-info');
+            const count = alerts.length;
             
-            noAlertsMessage.style.display = count > 0 ? 'none' : 'block';
+            // Update count badge
+            if (count === 0) {
+                countBadge.textContent = 'No Alerts';
+                countBadge.className = 'px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800';
+                noAlertsMessage.style.display = 'block';
+            } else {
+                countBadge.textContent = `${count} Alert${count > 1 ? 's' : ''}`;
+                countBadge.className = 'px-3 py-1 text-sm font-medium rounded-full bg-red-100 text-red-800';
+                noAlertsMessage.style.display = 'none';
+            }
         }
 
         // Process log entry for alerts
@@ -1019,7 +1070,7 @@
                         noAlertsMessage
                     );
                     
-                    updateAlertsCount();
+                    updateAlertCount();
                 }
             }
         }
@@ -1401,6 +1452,170 @@
             // ... existing cleanup code ...
             clearInterval(calibrationInterval);
         });
+
+        let probingInterval;
+        const PROBING_REFRESH_INTERVAL = 5000; // 5 seconds
+
+        // Update probing report data
+        async function updateProbingReport() {
+            try {
+                const response = await fetch('/api/probing-report');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Update timestamp
+                const timestamp = new Date(data.timestamp).toLocaleString();
+                document.getElementById('probing-timestamp').textContent = `Last updated: ${timestamp}`;
+                
+                // Update status
+                const statusElement = document.getElementById('probing-status');
+                if (data.out_of_tolerance) {
+                    statusElement.textContent = 'Out of Tolerance';
+                    statusElement.className = 'px-3 py-1 text-sm rounded-full bg-red-100 text-red-800';
+                    
+                    // Add to active alerts
+                    addAlert('error', 'Bed Leveling Error', `Bed leveling is out of tolerance. Max deviation: ${data.statistics.max_deviation.toFixed(3)}mm`, 'bed-leveling');
+                } else {
+                    statusElement.textContent = 'Within Tolerance';
+                    statusElement.className = 'px-3 py-1 text-sm rounded-full bg-green-100 text-green-800';
+                    
+                    // Remove bed leveling alert if it exists
+                    removeAlertsByType('bed-leveling');
+                }
+                
+                // Update statistics
+                document.getElementById('min-deviation').textContent = `${data.statistics.min_deviation.toFixed(3)} mm`;
+                document.getElementById('max-deviation').textContent = `${data.statistics.max_deviation.toFixed(3)} mm`;
+                document.getElementById('avg-deviation').textContent = `${data.statistics.average_deviation.toFixed(3)} mm`;
+                
+                // Update measurement grid
+                const grid = document.getElementById('measurement-grid');
+                grid.innerHTML = ''; // Clear existing measurements
+                
+                data.measurements.forEach((measurement, index) => {
+                    const point = document.createElement('div');
+                    point.className = `p-3 rounded ${Math.abs(measurement.deviation) > data.tolerance_threshold ? 'bg-red-100' : 'bg-green-100'}`;
+                    point.innerHTML = `
+                        <div class="text-xs text-gray-600">Point ${index + 1}</div>
+                        <div class="font-medium">${measurement.deviation.toFixed(3)} mm</div>
+                    `;
+                    grid.appendChild(point);
+                });
+                
+            } catch (error) {
+                console.error('Error updating probing report:', error);
+                // Add error to active alerts
+                addAlert('error', 'Probing Report Error', 'Failed to fetch bed leveling data', 'bed-leveling');
+            }
+        }
+
+        // Add alert type parameter to addAlert function
+        function addAlert(type, title, message, alertType = 'general') {
+            const alertsContainer = document.getElementById('alerts-container');
+            const noAlertsMessage = document.getElementById('no-alerts-message');
+            const existingAlert = Array.from(alertsContainer.children).find(
+                alert => alert.getAttribute('data-message') === message &&
+                        alert.getAttribute('data-type') === alertType
+            );
+            
+            if (!existingAlert) {
+                const alert = document.createElement('div');
+                alert.className = `alert-${type} mb-2 p-4 rounded-lg relative`;
+                alert.setAttribute('data-message', message);
+                alert.setAttribute('data-type', alertType);
+                
+                alert.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-semibold">${title}</h4>
+                            <p class="text-sm">${message}</p>
+                        </div>
+                        <button onclick="this.closest('.alert-${type}').remove(); updateAlertCount();" class="text-lg hover:text-gray-800">&times;</button>
+                    </div>
+                `;
+                
+                // Insert before the "no alerts" message
+                alertsContainer.insertBefore(alert, noAlertsMessage);
+                updateAlertCount();
+            }
+        }
+
+        // Add function to remove alerts by type
+        function removeAlertsByType(alertType) {
+            const alertsContainer = document.getElementById('alerts-container');
+            const alerts = alertsContainer.querySelectorAll(`[data-type="${alertType}"]`);
+            alerts.forEach(alert => alert.remove());
+            updateAlertCount();
+        }
+
+        // Add probing interval to initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... existing initialization code ...
+            
+            updateProbingReport();
+            probingInterval = setInterval(updateProbingReport, PROBING_REFRESH_INTERVAL);
+        });
+
+        // Add probing interval to cleanup
+        window.addEventListener('beforeunload', () => {
+            // ... existing cleanup code ...
+            clearInterval(probingInterval);
+        });
+
+        // Function to test alerts
+        function testAlerts() {
+            // Add an error alert
+            addAlert(
+                'error',
+                'Temperature Error',
+                'Extruder 1 temperature is out of range: 250°C (target: 220°C)',
+                'temperature'
+            );
+
+            // Add a warning alert
+            setTimeout(() => {
+                addAlert(
+                    'warning',
+                    'Material Warning',
+                    'Extruder 0 material is running low (15% remaining)',
+                    'material'
+                );
+            }, 500);
+
+            // Add an info alert
+            setTimeout(() => {
+                addAlert(
+                    'info',
+                    'Print Core Status',
+                    'Print core 1 has been active for 2 hours',
+                    'printcore'
+                );
+            }, 1000);
+        }
+
+        // Update alert styles
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            .alert-error {
+                background-color: #FEE2E2;
+                border: 1px solid #FCA5A5;
+                color: #991B1B;
+            }
+            .alert-warning {
+                background-color: #FEF3C7;
+                border: 1px solid #FCD34D;
+                color: #92400E;
+            }
+            .alert-info {
+                background-color: #EFF6FF;
+                border: 1px solid #BFDBFE;
+                color: #1E40AF;
+            }
+        `;
+        document.head.appendChild(styleSheet);
     </script>
 </body>
 </html> 
