@@ -157,6 +157,47 @@
                     <span id="printer-status" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">Unknown</span>
                 </div>
                 
+                <!-- Print Core Stats -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4">Print Core Statistics</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Print Core 0 -->
+                        <div class="stat-card">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="stat-title mb-0">Print Core 0</div>
+                                <div class="text-sm text-gray-500" id="core0-usage-time">Usage: --:--:--</div>
+                            </div>
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-sm text-gray-600">Last Extrusion:</span>
+                                    <div class="stat-value text-base" id="core0-last-extrusion">-- mm in -- s</div>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-600">Remaining Length:</span>
+                                    <div class="stat-value text-base" id="core0-remaining">-- mm</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Print Core 1 -->
+                        <div class="stat-card">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="stat-title mb-0">Print Core 1</div>
+                                <div class="text-sm text-gray-500" id="core1-usage-time">Usage: --:--:--</div>
+                            </div>
+                            <div class="space-y-2">
+                                <div>
+                                    <span class="text-sm text-gray-600">Last Extrusion:</span>
+                                    <div class="stat-value text-base" id="core1-last-extrusion">-- mm in -- s</div>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-600">Remaining Length:</span>
+                                    <div class="stat-value text-base" id="core1-remaining">-- mm</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Temperature Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="stat-card">
@@ -247,6 +288,7 @@
     <script>
         let statsInterval;
         let jobInterval;
+        let printCoresInterval;
 
         // Format seconds to HH:MM:SS
         function formatTime(seconds) {
@@ -454,8 +496,8 @@
                     document.getElementById('job-name').textContent = data.name || 'Unnamed Job';
 
                     // Update progress
-                    const progress = (data.progress || 0) * 100;
-                    document.getElementById('progress-text').textContent = `${progress.toFixed(1)}%`;
+                    const progress = Math.round((data.progress || 0) * 100);
+                    document.getElementById('progress-text').textContent = `${progress}%`;
                     document.getElementById('progress-bar').style.width = `${progress}%`;
 
                     // Update times
@@ -493,6 +535,42 @@
             }
         }
 
+        // Update print core information
+        async function updatePrintCores() {
+            try {
+                const response = await fetch('/api/print-cores');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Update Print Core 0
+                if (data['0'].last_extrusion) {
+                    document.getElementById('core0-last-extrusion').textContent = 
+                        `${data['0'].last_extrusion.amount.toFixed(2)} mm in ${data['0'].last_extrusion.time.toFixed(1)} s`;
+                    document.getElementById('core0-remaining').textContent = 
+                        `${data['0'].remaining_length.toFixed(0)} mm`;
+                    document.getElementById('core0-usage-time').textContent = 
+                        `Usage: ${formatTime(data['0'].usage_duration)}`;
+                }
+
+                // Update Print Core 1
+                if (data['1'].last_extrusion) {
+                    document.getElementById('core1-last-extrusion').textContent = 
+                        `${data['1'].last_extrusion.amount.toFixed(2)} mm in ${data['1'].last_extrusion.time.toFixed(1)} s`;
+                    document.getElementById('core1-remaining').textContent = 
+                        `${data['1'].remaining_length.toFixed(0)} mm`;
+                    document.getElementById('core1-usage-time').textContent = 
+                        `Usage: ${formatTime(data['1'].usage_duration)}`;
+                }
+
+            } catch (error) {
+                console.error('Error updating print cores:', error);
+            }
+        }
+
         // Show success message
         function showSuccess(message) {
             const successMessage = document.getElementById('success-message');
@@ -516,18 +594,21 @@
         // Load configuration when page loads
         document.addEventListener('DOMContentLoaded', () => {
             loadConfig();
-            // Start updating printer stats and job status immediately and every second
+            // Start updating printer stats, job status, and print cores immediately and every second
             console.log('Starting updates...'); // Debug log
             updatePrinterStats();
             updatePrintJob();
+            updatePrintCores();
             statsInterval = setInterval(updatePrinterStats, 1000);
             jobInterval = setInterval(updatePrintJob, 1000);
+            printCoresInterval = setInterval(updatePrintCores, 1000);
         });
 
         // Cleanup intervals when page is unloaded
         window.addEventListener('beforeunload', () => {
             clearInterval(statsInterval);
             clearInterval(jobInterval);
+            clearInterval(printCoresInterval);
         });
     </script>
 </body>

@@ -5,6 +5,7 @@ from aiohttp import web
 from aiohttp_cors import CorsConfig, ResourceOptions
 from dotenv import load_dotenv
 import aiohttp_cors
+import re
 
 # Load environment variables
 load_dotenv()
@@ -59,6 +60,59 @@ async def get_print_job(request):
     except Exception as e:
         return web.json_response(
             {'error': f'Failed to fetch print job: {str(e)}'}, 
+            status=500
+        )
+
+@routes.get('/api/print-cores')
+async def get_print_cores(request):
+    printer_ip = os.getenv('PRINTER_IP')
+    if not printer_ip:
+        return web.json_response({'error': 'Printer IP not configured'}, status=400)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'http://{printer_ip}/api/v1/system/log') as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # Initialize print core stats
+                    print_cores = {
+                        '0': {'last_extrusion': None, 'remaining_length': None, 'usage_duration': None},
+                        '1': {'last_extrusion': None, 'remaining_length': None, 'usage_duration': None}
+                    }
+                    
+                    # Regular expression pattern for print core info
+                    pattern = r"PrintCore (\d+) extruded ([\d.]+) mm in ([\d.]+) s, remaining length = ([\d.]+) mm, stat record usage duration: ([\d.]+) s"
+                    
+                    # Process log entries in reverse to get the most recent data
+                    for log_entry in reversed(data):
+                        if "PrintCore" in log_entry and "extruded" in log_entry:
+                            match = re.search(pattern, log_entry)
+                            if match:
+                                core_num = match.group(1)
+                                if print_cores[core_num]['last_extrusion'] is None:
+                                    print_cores[core_num] = {
+                                        'last_extrusion': {
+                                            'amount': float(match.group(2)),
+                                            'time': float(match.group(3))
+                                        },
+                                        'remaining_length': float(match.group(4)),
+                                        'usage_duration': float(match.group(5))
+                                    }
+                                    
+                                # If we have data for both cores, break
+                                if all(core['last_extrusion'] is not None for core in print_cores.values()):
+                                    break
+                    
+                    return web.json_response(print_cores)
+                else:
+                    return web.json_response(
+                        {'error': f'Failed to fetch system log: {response.status}'}, 
+                        status=response.status
+                    )
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch system log: {str(e)}'}, 
             status=500
         )
 
@@ -156,6 +210,7 @@ def init_app():
     app.router.add_get('/api/camera/stream', camera_stream)
     app.router.add_get('/api/printer-stats', get_printer_stats)
     app.router.add_get('/api/print-job', get_print_job)
+    app.router.add_get('/api/print-cores', get_print_cores)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
