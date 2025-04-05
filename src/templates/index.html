@@ -2043,9 +2043,13 @@
             const alertsContainer = document.getElementById('alerts-container');
             const noAlertsMessage = document.getElementById('no-alerts-message');
             const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            // For material alerts, only check the alert type
+            const isMaterialAlert = alertType.startsWith('material-');
             const existingAlert = Array.from(alertsContainer.children).find(
-                alert => alert.getAttribute('data-message') === message &&
-                        alert.getAttribute('data-type') === alertType
+                alert => isMaterialAlert ? 
+                    alert.getAttribute('data-type') === alertType :
+                    alert.getAttribute('data-message') === message && alert.getAttribute('data-type') === alertType
             );
             
             if (!existingAlert) {
@@ -2068,6 +2072,9 @@
                 // Insert before the "no alerts" message
                 alertsContainer.insertBefore(alert, noAlertsMessage);
                 updateAlertCount();
+            } else if (isMaterialAlert) {
+                // Update the existing material alert with new message
+                existingAlert.querySelector('p').textContent = message;
             }
         }
 

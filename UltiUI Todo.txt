@@ -4,7 +4,8 @@ UltiUI Todo:
 2) Create connection functionality and GET requests
 3) Create UI framework and block out
 4) Integrate GET based "features" (ie. Camera Stream, Printer State/Info, Current build job stats, etc)
-5) Debug and refine all GET based features
+5) Debug and refine all GET based features 
+----------------------COMPLETED------------------------------------------------
 6) Integrate authentication system for PUT requests
 7) Integrate PUT based "features"
 8) Debug and refine all PUT based features
