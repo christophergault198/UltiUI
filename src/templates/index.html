@@ -465,6 +465,26 @@
             color: #fcd34d;  /* Brighter yellow text */
         }
 
+        .alert-error {
+            background-color: #FEE2E2;
+            border: 1px solid #FCA5A5;
+            color: #991B1B;
+        }
+        .alert-warning {
+            background-color: #FEF3C7;
+            border: 1px solid #FCD34D;
+            color: #92400E;
+        }
+        .alert-info {
+            background-color: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            color: #1E40AF;
+        }
+        .dark .alert-info {
+            background-color: #1e3a8a;
+            border-color: #1e40af;
+            color: #bfdbfe;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen transition-colors duration-200">
@@ -1302,6 +1322,8 @@
                 return 'error';
             } else if (lowerMessage.includes('warning') || lowerMessage.includes('attention')) {
                 return 'warning';
+            } else if (lowerMessage.includes('systemservice') && lowerMessage.includes('scheduling next check')) {
+                return 'info';
             }
             return 'info';
         }
@@ -1340,6 +1362,24 @@
         // Process log entry for alerts
         function processLogForAlerts(log) {
             const lowerMessage = log.message.toLowerCase();
+            
+            // Check for system update messages
+            if (log.message.includes('SystemService') && log.message.includes('Scheduling next check for updates')) {
+                const updateMatch = log.message.match(/Scheduling next check for updates in (\d+\.\d+) minute/);
+                if (updateMatch) {
+                    const minutes = parseFloat(updateMatch[1]);
+                    const nextCheck = new Date(Date.now() + minutes * 60000);
+                    const timeString = nextCheck.toLocaleTimeString();
+                    
+                    // Remove any existing update check alerts
+                    removeAlertsByType('update-check');
+                    
+                    // Add new update check alert
+                    addAlert('info', 'System Updates', `Next update check scheduled for ${timeString}`, 'update-check', true);
+                }
+            }
+
+            // Check for other important messages
             const isImportant = 
                 lowerMessage.includes('error') ||
                 lowerMessage.includes('warning') ||
@@ -2056,6 +2096,11 @@
                 background-color: #EFF6FF;
                 border: 1px solid #BFDBFE;
                 color: #1E40AF;
+            }
+            .dark .alert-info {
+                background-color: #1e3a8a;
+                border-color: #1e40af;
+                color: #bfdbfe;
             }
         `;
         document.head.appendChild(styleSheet);
