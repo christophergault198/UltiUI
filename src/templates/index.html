@@ -58,6 +58,22 @@
             color: white;
             font-size: 1.25rem;
         }
+        .stat-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        .stat-title {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -75,6 +91,61 @@
                     <img id="camera-feed" class="camera-feed" src="" alt="Printer Camera Feed">
                     <div id="camera-overlay" class="camera-overlay">
                         <span>Camera feed not available</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Printer Stats Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Printer Status</h2>
+                    <span id="printer-status" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">Unknown</span>
+                </div>
+                
+                <!-- Temperature Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="stat-card">
+                        <div class="stat-title">Bed Temperature</div>
+                        <div class="stat-value">
+                            <span id="bed-temp">--</span>°C / 
+                            <span id="bed-target" class="text-gray-500">--</span>°C
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Extruder 1 Temperature</div>
+                        <div class="stat-value">
+                            <span id="ext1-temp">--</span>°C / 
+                            <span id="ext1-target" class="text-gray-500">--</span>°C
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Extruder 2 Temperature</div>
+                        <div class="stat-value">
+                            <span id="ext2-temp">--</span>°C / 
+                            <span id="ext2-target" class="text-gray-500">--</span>°C
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Position Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="stat-card">
+                        <div class="stat-title">Position</div>
+                        <div class="stat-value text-base">
+                            X: <span id="pos-x">--</span>mm<br>
+                            Y: <span id="pos-y">--</span>mm<br>
+                            Z: <span id="pos-z">--</span>mm
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Fan Speed</div>
+                        <div class="stat-value"><span id="fan-speed">--</span>%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">LED Status</div>
+                        <div class="stat-value">
+                            Brightness: <span id="led-brightness">--</span>%
+                        </div>
                     </div>
                 </div>
             </div>
@@ -119,6 +190,8 @@
     </div>
 
     <script>
+        let statsInterval;
+
         // Load current configuration
         async function loadConfig() {
             try {
@@ -159,6 +232,77 @@
             }
         }
 
+        // Update printer stats
+        async function updatePrinterStats() {
+            try {
+                const response = await fetch('/api/printer-stats');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Printer data received:', data); // Debug log
+
+                // Update status
+                const statusElement = document.getElementById('printer-status');
+                statusElement.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+                statusElement.className = `px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(data.status)}`;
+
+                // Update temperatures with null checks
+                if (data.bed && data.bed.temperature) {
+                    document.getElementById('bed-temp').textContent = data.bed.temperature.current.toFixed(1);
+                    document.getElementById('bed-target').textContent = data.bed.temperature.target;
+                }
+
+                if (data.heads && data.heads[0] && data.heads[0].extruders) {
+                    if (data.heads[0].extruders[0] && data.heads[0].extruders[0].hotend) {
+                        document.getElementById('ext1-temp').textContent = data.heads[0].extruders[0].hotend.temperature.current.toFixed(1);
+                        document.getElementById('ext1-target').textContent = data.heads[0].extruders[0].hotend.temperature.target;
+                    }
+                    if (data.heads[0].extruders[1] && data.heads[0].extruders[1].hotend) {
+                        document.getElementById('ext2-temp').textContent = data.heads[0].extruders[1].hotend.temperature.current.toFixed(1);
+                        document.getElementById('ext2-target').textContent = data.heads[0].extruders[1].hotend.temperature.target;
+                    }
+                }
+
+                // Update position with null checks
+                if (data.heads && data.heads[0] && data.heads[0].position) {
+                    document.getElementById('pos-x').textContent = data.heads[0].position.x.toFixed(1);
+                    document.getElementById('pos-y').textContent = data.heads[0].position.y.toFixed(1);
+                    document.getElementById('pos-z').textContent = data.heads[0].position.z.toFixed(1);
+                }
+
+                // Update fan and LED with null checks
+                if (data.heads && data.heads[0]) {
+                    document.getElementById('fan-speed').textContent = data.heads[0].fan;
+                }
+                if (data.led) {
+                    document.getElementById('led-brightness').textContent = data.led.brightness;
+                }
+
+            } catch (error) {
+                console.error('Error updating printer stats:', error);
+                // Update status to show error
+                const statusElement = document.getElementById('printer-status');
+                statusElement.textContent = 'Error';
+                statusElement.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+            }
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'printing':
+                    return 'bg-green-100 text-green-800';
+                case 'idle':
+                    return 'bg-blue-100 text-blue-800';
+                case 'error':
+                    return 'bg-red-100 text-red-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        }
+
         // Test connection to printer
         async function testConnection() {
             const statusIndicator = document.getElementById('status-indicator');
@@ -182,6 +326,11 @@
                     if (printerIp) {
                         cameraFeed.src = `http://${printerIp}:8080/?action=stream`;
                         cameraOverlay.style.display = 'none';
+                        
+                        // Start updating printer stats
+                        clearInterval(statsInterval);
+                        updatePrinterStats();
+                        statsInterval = setInterval(updatePrinterStats, 1000);
                     } else {
                         cameraFeed.src = '';
                         cameraOverlay.style.display = 'flex';
@@ -190,18 +339,20 @@
                     statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
                     statusText.textContent = `Not Connected: ${data.message}`;
                     
-                    // Hide camera feed
+                    // Hide camera feed and stop stats updates
                     cameraFeed.src = '';
                     cameraOverlay.style.display = 'flex';
+                    clearInterval(statsInterval);
                 }
             } catch (error) {
                 console.error('Error testing connection:', error);
                 statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
                 statusText.textContent = 'Connection test failed';
                 
-                // Hide camera feed
+                // Hide camera feed and stop stats updates
                 cameraFeed.src = '';
                 cameraOverlay.style.display = 'flex';
+                clearInterval(statsInterval);
             }
         }
 
@@ -226,7 +377,18 @@
         }
 
         // Load configuration when page loads
-        document.addEventListener('DOMContentLoaded', loadConfig);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+            // Start updating printer stats immediately and every second
+            console.log('Starting printer stats updates...'); // Debug log
+            updatePrinterStats();
+            statsInterval = setInterval(updatePrinterStats, 1000);
+        });
+
+        // Cleanup interval when page is unloaded
+        window.addEventListener('beforeunload', () => {
+            clearInterval(statsInterval);
+        });
     </script>
 </body>
 </html> 

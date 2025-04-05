@@ -1,0 +1,125 @@
+{
+  "bed": {
+    "pre_heat": {
+      "active": false
+    },
+    "temperature": {
+      "current": 85.1,
+      "target": 85
+    },
+    "type": "glass"
+  },
+  "diagnostics": {},
+  "heads": [
+    {
+      "acceleration": 2000,
+      "extruders": [
+        {
+          "active_material": {
+            "GUID": "40a273c6-0e15-4db5-a278-8eb0b4a9e293",
+            "guid": "40a273c6-0e15-4db5-a278-8eb0b4a9e293",
+            "length_remaining": 28033.599897035903
+          },
+          "feeder": {
+            "acceleration": 3000,
+            "jerk": 5,
+            "max_speed": 45
+          },
+          "hotend": {
+            "id": "AA 0.8",
+            "offset": {
+              "state": "valid",
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "revision": "0",
+            "serial": "9100422c0000",
+            "statistics": {
+              "last_material_guid": "40a273c6-0e15-4db5-a278-8eb0b4a9e293",
+              "material_extruded": 402830,
+              "max_temperature_exposed": 272,
+              "prints_since_cleaned": "36",
+              "time_spent_hot": 768300
+            },
+            "temperature": {
+              "current": 234.8,
+              "target": 235
+            }
+          }
+        },
+        {
+          "active_material": {
+            "GUID": "",
+            "guid": "",
+            "length_remaining": -1
+          },
+          "feeder": {
+            "acceleration": 3000,
+            "jerk": 5,
+            "max_speed": 45
+          },
+          "hotend": {
+            "id": "AA 0.4",
+            "offset": {
+              "state": "invalid",
+              "x": 22,
+              "y": 0,
+              "z": 0
+            },
+            "revision": "1",
+            "serial": "2c10e7290000",
+            "statistics": {
+              "last_material_guid": "40a273c6-0e15-4db5-a278-8eb0b4a9e293",
+              "material_extruded": 498480,
+              "max_temperature_exposed": 271,
+              "prints_since_cleaned": "59",
+              "time_spent_hot": 2132340
+            },
+            "temperature": {
+              "current": 47.9,
+              "target": 0
+            }
+          }
+        }
+      ],
+      "fan": 20,
+      "jerk": {
+        "x": 25,
+        "y": 25,
+        "z": 0.4
+      },
+      "max_speed": {
+        "x": 300,
+        "y": 300,
+        "z": 40
+      },
+      "position": {
+        "x": 112.008,
+        "y": 102.924,
+        "z": 22.53
+      }
+    }
+  ],
+  "led": {
+    "blink": {},
+    "brightness": 100,
+    "hue": 0,
+    "saturation": 0
+  },
+  "network": {
+    "ethernet": {
+      "connected": true,
+      "enabled": true
+    },
+    "wifi": {
+      "connected": false,
+      "enabled": false,
+      "mode": "CABLE",
+      "ssid": "UM-NO-HOTSPOT-NAME-SET"
+    },
+    "wifi_networks": []
+  },
+  "status": "printing",
+  "validate_header": {}
+}
