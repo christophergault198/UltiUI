@@ -561,6 +561,60 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Toolhead Calibration Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Toolhead Calibration</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Extruder 0 Calibration -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 0</h3>
+                            <span id="ext0-cal-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <div class="text-sm text-gray-600">X Offset</div>
+                                    <div id="ext0-x-offset" class="font-medium">-- mm</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-gray-600">Y Offset</div>
+                                    <div id="ext0-y-offset" class="font-medium">-- mm</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-gray-600">Z Offset</div>
+                                    <div id="ext0-z-offset" class="font-medium">-- mm</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Extruder 1 Calibration -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 1</h3>
+                            <span id="ext1-cal-status" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Loading...</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <div class="text-sm text-gray-600">X Offset</div>
+                                    <div id="ext1-x-offset" class="font-medium">-- mm</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-gray-600">Y Offset</div>
+                                    <div id="ext1-y-offset" class="font-medium">-- mm</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-gray-600">Z Offset</div>
+                                    <div id="ext1-z-offset" class="font-medium">-- mm</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -1268,6 +1322,84 @@
             clearInterval(logInterval);
             clearInterval(flowInterval);
             clearInterval(materialInterval);
+        });
+
+        let calibrationInterval;
+
+        // Get calibration status class
+        function getCalibrationStatusClass(state) {
+            switch (state) {
+                case 'valid':
+                    return 'bg-green-100 text-green-800';
+                case 'invalid':
+                    return 'bg-red-100 text-red-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // Update toolhead calibration data
+        async function updateToolheadCalibration() {
+            try {
+                const response = await fetch('/api/toolhead-calibration');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Update Extruder 0
+                const ext0Data = data.extruder0;
+                if (ext0Data.error) {
+                    document.getElementById('ext0-cal-status').textContent = 'Error';
+                    document.getElementById('ext0-cal-status').className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+                    document.getElementById('ext0-x-offset').textContent = '-- mm';
+                    document.getElementById('ext0-y-offset').textContent = '-- mm';
+                    document.getElementById('ext0-z-offset').textContent = '-- mm';
+                } else {
+                    const status = ext0Data.state || 'unknown';
+                    document.getElementById('ext0-cal-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                    document.getElementById('ext0-cal-status').className = `px-2 py-1 text-xs rounded-full ${getCalibrationStatusClass(status)}`;
+                    document.getElementById('ext0-x-offset').textContent = `${ext0Data.x || 0} mm`;
+                    document.getElementById('ext0-y-offset').textContent = `${ext0Data.y || 0} mm`;
+                    document.getElementById('ext0-z-offset').textContent = `${ext0Data.z || 0} mm`;
+                }
+                
+                // Update Extruder 1
+                const ext1Data = data.extruder1;
+                if (ext1Data.error) {
+                    document.getElementById('ext1-cal-status').textContent = 'Error';
+                    document.getElementById('ext1-cal-status').className = 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800';
+                    document.getElementById('ext1-x-offset').textContent = '-- mm';
+                    document.getElementById('ext1-y-offset').textContent = '-- mm';
+                    document.getElementById('ext1-z-offset').textContent = '-- mm';
+                } else {
+                    const status = ext1Data.state || 'unknown';
+                    document.getElementById('ext1-cal-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                    document.getElementById('ext1-cal-status').className = `px-2 py-1 text-xs rounded-full ${getCalibrationStatusClass(status)}`;
+                    document.getElementById('ext1-x-offset').textContent = `${ext1Data.x || 0} mm`;
+                    document.getElementById('ext1-y-offset').textContent = `${ext1Data.y || 0} mm`;
+                    document.getElementById('ext1-z-offset').textContent = `${ext1Data.z || 0} mm`;
+                }
+
+            } catch (error) {
+                console.error('Error updating toolhead calibration:', error);
+            }
+        }
+
+        // Add calibration interval to initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... existing initialization code ...
+            
+            updateToolheadCalibration();
+            calibrationInterval = setInterval(updateToolheadCalibration, 1000);
+        });
+
+        // Add calibration interval to cleanup
+        window.addEventListener('beforeunload', () => {
+            // ... existing cleanup code ...
+            clearInterval(calibrationInterval);
         });
     </script>
 </body>

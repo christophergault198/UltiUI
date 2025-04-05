@@ -257,6 +257,34 @@ async def get_material_remaining(request):
             status=500
         )
 
+@routes.get('/api/toolhead-calibration')
+async def get_toolhead_calibration(request):
+    printer_ip = os.getenv('PRINTER_IP')
+    if not printer_ip:
+        return web.json_response({'error': 'Printer IP not configured'}, status=400)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Fetch data for both extruders
+            results = {}
+            for extruder in [0, 1]:
+                url = f'http://{printer_ip}/api/v1/printer/heads/0/extruders/{extruder}/hotend/offset'
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        results[f'extruder{extruder}'] = data
+                    else:
+                        results[f'extruder{extruder}'] = {
+                            'error': f'Failed to fetch data: {response.status}'
+                        }
+            
+            return web.json_response(results)
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch calibration data: {str(e)}'}, 
+            status=500
+        )
+
 async def get_config(request):
     """Get current configuration"""
     return web.json_response(config)
@@ -355,6 +383,7 @@ def init_app():
     app.router.add_get('/api/system-log', get_system_log)
     app.router.add_get('/api/flow-data/{samples}', get_flow_data)
     app.router.add_get('/api/material-remaining', get_material_remaining)
+    app.router.add_get('/api/toolhead-calibration', get_toolhead_calibration)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
