@@ -74,6 +74,61 @@
             font-weight: 600;
             color: #1e293b;
         }
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #1a1a1a;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        .log-entry {
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #2d2d2d;
+            color: #e5e5e5;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-timestamp {
+            color: #9ca3af;
+            margin-right: 0.5rem;
+        }
+        .log-message {
+            color: #e5e5e5;
+        }
+        .collapsible {
+            cursor: pointer;
+            padding: 1rem;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1rem;
+            font-weight: 500;
+            background-color: #f8fafc;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collapsible:after {
+            content: '\002B';
+            font-weight: bold;
+            float: right;
+            margin-left: 5px;
+        }
+        .active:after {
+            content: "\2212";
+        }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: #1a1a1a;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -274,6 +329,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- System Log Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+                <button type="button" class="collapsible flex items-center justify-between">
+                    <div class="flex items-center">
+                        <h2 class="text-2xl font-semibold text-gray-800">System Log</h2>
+                        <span id="log-status" class="ml-4 px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">Idle</span>
+                    </div>
+                </button>
+                <div class="collapsible-content">
+                    <div id="log-container" class="log-container mt-4">
+                        <!-- Log entries will be inserted here -->
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -289,6 +359,8 @@
         let statsInterval;
         let jobInterval;
         let printCoresInterval;
+        let logInterval;
+        let seenMessages = new Set();
 
         // Format seconds to HH:MM:SS
         function formatTime(seconds) {
@@ -591,17 +663,81 @@
             }, 3000);
         }
 
-        // Load configuration when page loads
+        // Update system log
+        async function updateSystemLog() {
+            try {
+                const response = await fetch('/api/system-log');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const logs = await response.json();
+                const container = document.getElementById('log-container');
+                let hasNewMessages = false;
+
+                for (const log of logs.reverse()) {
+                    if (!seenMessages.has(log.raw)) {
+                        seenMessages.add(log.raw);
+                        hasNewMessages = true;
+
+                        const entry = document.createElement('div');
+                        entry.className = 'log-entry';
+                        entry.innerHTML = `
+                            <span class="log-timestamp">${log.timestamp}</span>
+                            <span class="log-message">${log.message}</span>
+                        `;
+                        container.insertBefore(entry, container.firstChild);
+                    }
+                }
+
+                // Keep only the last 100 messages in the DOM
+                while (container.children.length > 100) {
+                    container.removeChild(container.lastChild);
+                }
+
+                // Update status indicator
+                if (hasNewMessages) {
+                    const status = document.getElementById('log-status');
+                    status.textContent = 'Active';
+                    status.className = 'ml-4 px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full';
+                    setTimeout(() => {
+                        status.textContent = 'Idle';
+                        status.className = 'ml-4 px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full';
+                    }, 1000);
+                }
+
+            } catch (error) {
+                console.error('Error updating system log:', error);
+            }
+        }
+
+        // Initialize collapsible sections
         document.addEventListener('DOMContentLoaded', () => {
+            const coll = document.getElementsByClassName("collapsible");
+            for (const element of coll) {
+                element.addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            }
+
+            // Start all update intervals
             loadConfig();
-            // Start updating printer stats, job status, and print cores immediately and every second
-            console.log('Starting updates...'); // Debug log
+            console.log('Starting updates...');
             updatePrinterStats();
             updatePrintJob();
             updatePrintCores();
+            updateSystemLog();
             statsInterval = setInterval(updatePrinterStats, 1000);
             jobInterval = setInterval(updatePrintJob, 1000);
             printCoresInterval = setInterval(updatePrintCores, 1000);
+            logInterval = setInterval(updateSystemLog, 1000);
         });
 
         // Cleanup intervals when page is unloaded
@@ -609,6 +745,7 @@
             clearInterval(statsInterval);
             clearInterval(jobInterval);
             clearInterval(printCoresInterval);
+            clearInterval(logInterval);
         });
     </script>
 </body>

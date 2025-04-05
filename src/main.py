@@ -6,6 +6,7 @@ from aiohttp_cors import CorsConfig, ResourceOptions
 from dotenv import load_dotenv
 import aiohttp_cors
 import re
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -116,6 +117,48 @@ async def get_print_cores(request):
             status=500
         )
 
+@routes.get('/api/system-log')
+async def get_system_log(request):
+    printer_ip = os.getenv('PRINTER_IP')
+    if not printer_ip:
+        return web.json_response({'error': 'Printer IP not configured'}, status=400)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'http://{printer_ip}/api/v1/system/log') as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # Process log entries to remove hostname and simplify
+                    processed_logs = []
+                    seen_messages = set()  # Track unique messages
+                    
+                    for log_entry in data:
+                        # Extract timestamp and message parts
+                        match = re.match(r"(\w+ \d+ \d+:\d+:\d+) \S+ (.+)", log_entry)
+                        if match:
+                            timestamp, message = match.groups()
+                            # Only add if we haven't seen this exact message before
+                            if message not in seen_messages:
+                                seen_messages.add(message)
+                                processed_logs.append({
+                                    'timestamp': timestamp,
+                                    'message': message,
+                                    'raw': log_entry
+                                })
+                    
+                    return web.json_response(processed_logs[-100:])  # Return last 100 unique messages
+                else:
+                    return web.json_response(
+                        {'error': f'Failed to fetch system log: {response.status}'}, 
+                        status=response.status
+                    )
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch system log: {str(e)}'}, 
+            status=500
+        )
+
 async def get_config(request):
     """Get current configuration"""
     return web.json_response(config)
@@ -211,6 +254,7 @@ def init_app():
     app.router.add_get('/api/printer-stats', get_printer_stats)
     app.router.add_get('/api/print-job', get_print_job)
     app.router.add_get('/api/print-cores', get_print_cores)
+    app.router.add_get('/api/system-log', get_system_log)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
