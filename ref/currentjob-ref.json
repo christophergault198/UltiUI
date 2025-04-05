@@ -1,0 +1,18 @@
+{
+    "datetime_cleaned": "",
+    "datetime_finished": "",
+    "datetime_started": "2025-04-05T11:47:43+00:00",
+    "name": "UMS3_2014-GOXEthanolRegenEngine.ufp",
+    "pause_source": "",
+    "progress": 0.32,
+    "reprint_original_uuid": "",
+    "result": "",
+    "source": "WEB_API",
+    "source_application": "Ultimaker Connect",
+    "source_user": "",
+    "state": "printing",
+    "time_elapsed": 12460,
+    "time_estimated": 39084,
+    "time_total": 38951,
+    "uuid": "5e3cafa2-c1a3-401f-8e1e-713be66b2f58"
+  }

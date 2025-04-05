@@ -39,6 +39,29 @@ async def get_printer_stats(request):
             status=500
         )
 
+@routes.get('/api/print-job')
+async def get_print_job(request):
+    printer_ip = os.getenv('PRINTER_IP')
+    if not printer_ip:
+        return web.json_response({'error': 'Printer IP not configured'}, status=400)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'http://{printer_ip}/api/v1/print_job') as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return web.json_response(data)
+                else:
+                    return web.json_response(
+                        {'error': f'Failed to fetch print job: {response.status}'}, 
+                        status=response.status
+                    )
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch print job: {str(e)}'}, 
+            status=500
+        )
+
 async def get_config(request):
     """Get current configuration"""
     return web.json_response(config)
@@ -132,6 +155,7 @@ def init_app():
     app.router.add_get('/api/test-connection', test_connection)
     app.router.add_get('/api/camera/stream', camera_stream)
     app.router.add_get('/api/printer-stats', get_printer_stats)
+    app.router.add_get('/api/print-job', get_print_job)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
