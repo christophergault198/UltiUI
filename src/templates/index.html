@@ -171,6 +171,23 @@
         .alert-dismiss:hover {
             opacity: 1;
         }
+        .log-count {
+            font-size: 0.85em;
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            background-color: #374151;
+            color: #9CA3AF;
+            margin: 0 0.5rem;
+        }
+        .log-details {
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: #9CA3AF;
+        }
+        .log-entry {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #2d2d2d;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -953,7 +970,48 @@
             }
         }
 
-        // Update system log (modified to include alert processing)
+        // Add message pattern tracking
+        let messagePatterns = new Map(); // Store message patterns and their variations
+
+        // Helper function to get message pattern
+        function getMessagePattern(message) {
+            // Special cases for different message types
+            if (message.includes('MJPG-streamer') && message.includes('serving client')) {
+                return 'MJPG-streamer serving client';
+            }
+            if (message.includes('PrintCore') && message.includes('extruded')) {
+                return 'PrintCore extrusion update';
+            }
+            if (message.includes('Queueing tag for hotend')) {
+                return 'NFC tag queue update';
+            }
+            if (message.includes('Writing tag')) {
+                return 'NFC tag write';
+            }
+            // Default case - use full message as pattern
+            return message;
+        }
+
+        // Helper function to extract key details from message
+        function getMessageDetails(message, pattern) {
+            switch (pattern) {
+                case 'MJPG-streamer serving client':
+                    const clientMatch = message.match(/serving client: ([^\s]+)/);
+                    return clientMatch ? clientMatch[1] : 'unknown client';
+                case 'PrintCore extrusion update':
+                    const extrusionMatch = message.match(/PrintCore (\d+) extruded ([\d.]+) mm in ([\d.]+) s, remaining length = (\d+) mm/);
+                    return extrusionMatch ? 
+                        `Core ${extrusionMatch[1]}: ${extrusionMatch[2]}mm in ${extrusionMatch[3]}s (${extrusionMatch[4]}mm remaining)` : 
+                        'unknown extrusion';
+                case 'NFC tag queue update':
+                case 'NFC tag write':
+                    return ''; // Don't show details for NFC messages
+                default:
+                    return '';
+            }
+        }
+
+        // Update system log with improved message consolidation
         async function updateSystemLog() {
             try {
                 const response = await fetch('/api/system-log');
@@ -974,19 +1032,74 @@
                         // Process for alerts
                         processLogForAlerts(log);
 
-                        const entry = document.createElement('div');
-                        entry.className = 'log-entry';
-                        entry.innerHTML = `
-                            <span class="log-timestamp">${log.timestamp}</span>
-                            <span class="log-message">${log.message}</span>
-                        `;
-                        container.insertBefore(entry, container.firstChild);
+                        // Get message pattern and details
+                        const pattern = getMessagePattern(log.message);
+                        const details = getMessageDetails(log.message, pattern);
+                        
+                        if (messagePatterns.has(pattern)) {
+                            const patternData = messagePatterns.get(pattern);
+                            patternData.count++;
+                            patternData.lastTimestamp = log.timestamp;
+                            
+                            // Update existing element
+                            const element = patternData.element;
+                            element.querySelector('.log-timestamp').textContent = log.timestamp;
+                            const countBadge = element.querySelector('.log-count');
+                            countBadge.textContent = `(${patternData.count}×)`;
+                            countBadge.style.display = 'inline';
+
+                            // Update details if needed
+                            if (details) {
+                                const detailsElement = element.querySelector('.log-details');
+                                if (detailsElement) {
+                                    if (!patternData.details.includes(details)) {
+                                        patternData.details.push(details);
+                                        if (patternData.details.length > 5) {
+                                            patternData.details.shift(); // Keep only last 5 variations
+                                        }
+                                        detailsElement.innerHTML = patternData.details
+                                            .map(d => `<div class="text-gray-400 text-sm ml-8">${d}</div>`)
+                                            .join('');
+                                    }
+                                }
+                            }
+                            
+                            // Move to top
+                            container.insertBefore(element, container.firstChild);
+                        } else {
+                            // Create new element for unique message pattern
+                            const entry = document.createElement('div');
+                            entry.className = 'log-entry';
+                            entry.innerHTML = `
+                                <div>
+                                    <span class="log-timestamp">${log.timestamp}</span>
+                                    <span class="log-count" style="display: none; color: #6B7280; margin: 0 0.5rem;">(1×)</span>
+                                    <span class="log-message">${log.message}</span>
+                                </div>
+                                ${details ? `<div class="log-details"><div class="text-gray-400 text-sm ml-8">${details}</div></div>` : ''}
+                            `;
+                            container.insertBefore(entry, container.firstChild);
+                            
+                            // Store in patterns map
+                            messagePatterns.set(pattern, {
+                                count: 1,
+                                lastTimestamp: log.timestamp,
+                                element: entry,
+                                details: details ? [details] : []
+                            });
+                        }
                     }
                 }
 
-                // Keep only the last 100 messages in the DOM
+                // Keep only the last 100 unique messages in the DOM
                 while (container.children.length > 100) {
-                    container.removeChild(container.lastChild);
+                    const lastChild = container.lastChild;
+                    const patternToRemove = Array.from(messagePatterns.entries())
+                        .find(([_, value]) => value.element === lastChild);
+                    if (patternToRemove) {
+                        messagePatterns.delete(patternToRemove[0]);
+                    }
+                    container.removeChild(lastChild);
                 }
 
                 // Update status indicator
