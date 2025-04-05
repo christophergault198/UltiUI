@@ -393,12 +393,7 @@
             <div class="bg-white rounded-lg shadow-md p-6 mt-8">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-2xl font-semibold text-gray-800">Active Alerts</h2>
-                    <div class="flex items-center space-x-4">
-                        <button onclick="testAlerts()" class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
-                            Test Alerts
-                        </button>
-                        <span id="alerts-count" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">No Alerts</span>
-                    </div>
+                    <span id="alerts-count" class="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">No Alerts</span>
                 </div>
                 <div id="alerts-container" class="space-y-2">
                     <!-- Alerts will be inserted here -->
@@ -1408,6 +1403,8 @@
                     document.getElementById('ext0-x-offset').textContent = '-- mm';
                     document.getElementById('ext0-y-offset').textContent = '-- mm';
                     document.getElementById('ext0-z-offset').textContent = '-- mm';
+                    // Add error alert
+                    addAlert('error', 'Extruder 0', 'Failed to fetch calibration data', 'calibration-0');
                 } else {
                     const status = ext0Data.state || 'unknown';
                     document.getElementById('ext0-cal-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
@@ -1415,6 +1412,13 @@
                     document.getElementById('ext0-x-offset').textContent = `${ext0Data.x || 0} mm`;
                     document.getElementById('ext0-y-offset').textContent = `${ext0Data.y || 0} mm`;
                     document.getElementById('ext0-z-offset').textContent = `${ext0Data.z || 0} mm`;
+                    
+                    // Handle calibration status
+                    if (status === 'invalid') {
+                        addAlert('error', 'Extruder 0', 'Calibration is invalid - recalibration required', 'calibration-0', false);
+                    } else {
+                        removeAlertsByType('calibration-0');
+                    }
                 }
                 
                 // Update Extruder 1
@@ -1425,6 +1429,8 @@
                     document.getElementById('ext1-x-offset').textContent = '-- mm';
                     document.getElementById('ext1-y-offset').textContent = '-- mm';
                     document.getElementById('ext1-z-offset').textContent = '-- mm';
+                    // Add error alert
+                    addAlert('error', 'Extruder 1', 'Failed to fetch calibration data', 'calibration-1');
                 } else {
                     const status = ext1Data.state || 'unknown';
                     document.getElementById('ext1-cal-status').textContent = status.charAt(0).toUpperCase() + status.slice(1);
@@ -1432,6 +1438,13 @@
                     document.getElementById('ext1-x-offset').textContent = `${ext1Data.x || 0} mm`;
                     document.getElementById('ext1-y-offset').textContent = `${ext1Data.y || 0} mm`;
                     document.getElementById('ext1-z-offset').textContent = `${ext1Data.z || 0} mm`;
+                    
+                    // Handle calibration status
+                    if (status === 'invalid') {
+                        addAlert('error', 'Extruder 1', 'Calibration is invalid - recalibration required', 'calibration-1', false);
+                    } else {
+                        removeAlertsByType('calibration-1');
+                    }
                 }
 
             } catch (error) {
@@ -1513,7 +1526,7 @@
         }
 
         // Add alert type parameter to addAlert function
-        function addAlert(type, title, message, alertType = 'general') {
+        function addAlert(type, title, message, alertType = 'general', isDismissible = true) {
             const alertsContainer = document.getElementById('alerts-container');
             const noAlertsMessage = document.getElementById('no-alerts-message');
             const existingAlert = Array.from(alertsContainer.children).find(
@@ -1533,7 +1546,7 @@
                             <h4 class="font-semibold">${title}</h4>
                             <p class="text-sm">${message}</p>
                         </div>
-                        <button onclick="this.closest('.alert-${type}').remove(); updateAlertCount();" class="text-lg hover:text-gray-800">&times;</button>
+                        ${isDismissible ? `<button onclick="this.closest('.alert-${type}').remove(); updateAlertCount();" class="text-lg hover:text-gray-800">&times;</button>` : ''}
                     </div>
                 `;
                 
@@ -1564,37 +1577,6 @@
             // ... existing cleanup code ...
             clearInterval(probingInterval);
         });
-
-        // Function to test alerts
-        function testAlerts() {
-            // Add an error alert
-            addAlert(
-                'error',
-                'Temperature Error',
-                'Extruder 1 temperature is out of range: 250°C (target: 220°C)',
-                'temperature'
-            );
-
-            // Add a warning alert
-            setTimeout(() => {
-                addAlert(
-                    'warning',
-                    'Material Warning',
-                    'Extruder 0 material is running low (15% remaining)',
-                    'material'
-                );
-            }, 500);
-
-            // Add an info alert
-            setTimeout(() => {
-                addAlert(
-                    'info',
-                    'Print Core Status',
-                    'Print core 1 has been active for 2 hours',
-                    'printcore'
-                );
-            }, 1000);
-        }
 
         // Update alert styles
         const styleSheet = document.createElement('style');
