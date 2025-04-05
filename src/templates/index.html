@@ -400,6 +400,92 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Active Flow Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Active Flow Monitor</h2>
+                    <div class="flex items-center space-x-4">
+                        <label for="sample-size" class="text-sm text-gray-600">Sample Size:</label>
+                        <select id="sample-size" class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="10">10 samples</option>
+                            <option value="20">20 samples</option>
+                            <option value="30">30 samples</option>
+                            <option value="50">50 samples</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Extruder 0 Flow Stats -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 0</h3>
+                            <span id="ext0-active" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Flow Rate</span>
+                                    <span id="ext0-flow" class="text-sm font-medium">-- units/s</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext0-flow-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Heater Power</span>
+                                    <span id="ext0-power" class="text-sm font-medium">--%</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext0-power-bar" class="h-full bg-red-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Total Steps:</span>
+                                    <span id="ext0-steps" class="font-medium">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Extruder 1 Flow Stats -->
+                    <div class="stat-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium text-gray-800">Extruder 1</h3>
+                            <span id="ext1-active" class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Flow Rate</span>
+                                    <span id="ext1-flow" class="text-sm font-medium">-- units/s</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext1-flow-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-gray-600">Heater Power</span>
+                                    <span id="ext1-power" class="text-sm font-medium">--%</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="ext1-power-bar" class="h-full bg-red-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Total Steps:</span>
+                                    <span id="ext1-steps" class="font-medium">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -418,6 +504,9 @@
         let logInterval;
         let seenMessages = new Set();
         let activeAlerts = new Map(); // Store active alerts with their IDs
+        let flowInterval;
+        const MAX_FLOW_RATE = 5000;  // Maximum expected flow rate
+        const MAX_HEATER_POWER = 255;  // Maximum heater power value
 
         // Format seconds to HH:MM:SS
         function formatTime(seconds) {
@@ -858,6 +947,48 @@
             }
         }
 
+        // Update flow data
+        async function updateFlowData() {
+            try {
+                const sampleSize = document.getElementById('sample-size').value;
+                const response = await fetch(`/api/flow-data/${sampleSize}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Update Extruder 0
+                const ext0Flow = data.extruder0.flow_rate;
+                const ext0Power = data.extruder0.heater_power;
+                document.getElementById('ext0-flow').textContent = `${ext0Flow.toFixed(1)} units/s`;
+                document.getElementById('ext0-power').textContent = `${((ext0Power / MAX_HEATER_POWER) * 100).toFixed(1)}%`;
+                document.getElementById('ext0-steps').textContent = data.extruder0.total_steps.toLocaleString();
+                document.getElementById('ext0-flow-bar').style.width = `${(ext0Flow / MAX_FLOW_RATE) * 100}%`;
+                document.getElementById('ext0-power-bar').style.width = `${(ext0Power / MAX_HEATER_POWER) * 100}%`;
+                
+                // Update Extruder 1
+                const ext1Flow = data.extruder1.flow_rate;
+                const ext1Power = data.extruder1.heater_power;
+                document.getElementById('ext1-flow').textContent = `${ext1Flow.toFixed(1)} units/s`;
+                document.getElementById('ext1-power').textContent = `${((ext1Power / MAX_HEATER_POWER) * 100).toFixed(1)}%`;
+                document.getElementById('ext1-steps').textContent = data.extruder1.total_steps.toLocaleString();
+                document.getElementById('ext1-flow-bar').style.width = `${(ext1Flow / MAX_FLOW_RATE) * 100}%`;
+                document.getElementById('ext1-power-bar').style.width = `${(ext1Power / MAX_HEATER_POWER) * 100}%`;
+
+                // Update active states
+                const activeExtruder = data.active_extruder;
+                document.getElementById('ext0-active').className = `px-2 py-1 text-xs rounded-full ${activeExtruder === 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`;
+                document.getElementById('ext0-active').textContent = activeExtruder === 0 ? 'Active' : 'Inactive';
+                document.getElementById('ext1-active').className = `px-2 py-1 text-xs rounded-full ${activeExtruder === 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`;
+                document.getElementById('ext1-active').textContent = activeExtruder === 1 ? 'Active' : 'Inactive';
+
+            } catch (error) {
+                console.error('Error updating flow data:', error);
+            }
+        }
+
         // Initialize collapsible sections
         document.addEventListener('DOMContentLoaded', () => {
             const coll = document.getElementsByClassName("collapsible");
@@ -884,6 +1015,8 @@
             jobInterval = setInterval(updatePrintJob, 1000);
             printCoresInterval = setInterval(updatePrintCores, 1000);
             logInterval = setInterval(updateSystemLog, 1000);
+            updateFlowData();
+            flowInterval = setInterval(updateFlowData, 1000);
         });
 
         // Cleanup intervals when page is unloaded
@@ -892,6 +1025,7 @@
             clearInterval(jobInterval);
             clearInterval(printCoresInterval);
             clearInterval(logInterval);
+            clearInterval(flowInterval);
         });
     </script>
 </body>

@@ -159,6 +159,70 @@ async def get_system_log(request):
             status=500
         )
 
+@routes.get('/api/flow-data/{samples}')
+async def get_flow_data(request):
+    printer_ip = os.getenv('PRINTER_IP')
+    if not printer_ip:
+        return web.json_response({'error': 'Printer IP not configured'}, status=400)
+    
+    try:
+        samples = request.match_info['samples']
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'http://{printer_ip}/api/v1/printer/diagnostics/temperature_flow/{samples}') as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # Process the data to get the latest values and calculate averages
+                    if len(data) > 1:  # Check if we have the header and at least one data point
+                        headers = data[0]
+                        values = data[1:]  # Skip header row
+                        
+                        # Calculate statistics for each metric
+                        stats = {
+                            'extruder0': {
+                                'current_temp': values[-1][headers.index('temperature0')],
+                                'target_temp': values[-1][headers.index('target0')],
+                                'heater_power': values[-1][headers.index('heater0')],
+                                'flow_rate': values[-1][headers.index('flow_sensor0')],
+                                'total_steps': values[-1][headers.index('flow_steps0')]
+                            },
+                            'extruder1': {
+                                'current_temp': values[-1][headers.index('temperature1')],
+                                'target_temp': values[-1][headers.index('target1')],
+                                'heater_power': values[-1][headers.index('heater1')],
+                                'flow_rate': values[-1][headers.index('flow_sensor1')],
+                                'total_steps': values[-1][headers.index('flow_steps1')]
+                            },
+                            'bed': {
+                                'current_temp': values[-1][headers.index('bed_temperature')],
+                                'target_temp': values[-1][headers.index('bed_target')],
+                                'heater_power': values[-1][headers.index('bed_heater')]
+                            },
+                            'active_extruder': values[-1][headers.index('active_hotend_or_state')],
+                            'history': {
+                                'timestamps': [row[0] for row in values],
+                                'extruder0_temp': [row[headers.index('temperature0')] for row in values],
+                                'extruder1_temp': [row[headers.index('temperature1')] for row in values],
+                                'bed_temp': [row[headers.index('bed_temperature')] for row in values],
+                                'flow0': [row[headers.index('flow_sensor0')] for row in values],
+                                'flow1': [row[headers.index('flow_sensor1')] for row in values]
+                            }
+                        }
+                        
+                        return web.json_response(stats)
+                    else:
+                        return web.json_response({'error': 'Insufficient data points'}, status=400)
+                else:
+                    return web.json_response(
+                        {'error': f'Failed to fetch flow data: {response.status}'}, 
+                        status=response.status
+                    )
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch flow data: {str(e)}'}, 
+            status=500
+        )
+
 async def get_config(request):
     """Get current configuration"""
     return web.json_response(config)
@@ -255,6 +319,7 @@ def init_app():
     app.router.add_get('/api/print-job', get_print_job)
     app.router.add_get('/api/print-cores', get_print_cores)
     app.router.add_get('/api/system-log', get_system_log)
+    app.router.add_get('/api/flow-data/{samples}', get_flow_data)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
