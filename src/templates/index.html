@@ -1320,7 +1320,7 @@
             const lowerMessage = message.toLowerCase();
             if (lowerMessage.includes('error') || lowerMessage.includes('failed') || lowerMessage.includes('critical')) {
                 return 'error';
-            } else if (lowerMessage.includes('warning') || lowerMessage.includes('attention')) {
+            } else if (message.includes('WAR') || lowerMessage.includes('attention')) {
                 return 'warning';
             } else if (lowerMessage.includes('systemservice') && lowerMessage.includes('scheduling next check')) {
                 return 'info';
@@ -1382,7 +1382,7 @@
             // Check for other important messages
             const isImportant = 
                 lowerMessage.includes('error') ||
-                lowerMessage.includes('warning') ||
+                log.message.includes('WAR') ||  // Changed to look for exact "WAR" match
                 lowerMessage.includes('failed') ||
                 lowerMessage.includes('critical') ||
                 lowerMessage.includes('attention') ||
@@ -1392,8 +1392,8 @@
                 const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 const alertType = getAlertType(log.message);
                 
-                // Add to active alerts if not already present
-                if (!Array.from(activeAlerts.values()).some(alert => alert.message === log.message)) {
+                // For warning messages, always add them as new alerts
+                if (alertType === 'warning') {
                     activeAlerts.set(alertId, {
                         timestamp: log.timestamp,
                         message: log.message,
@@ -1405,14 +1405,50 @@
                     
                     // Insert before the "no alerts" message
                     const noAlertsMessage = document.getElementById('no-alerts-message');
-                    alertsContainer.insertBefore(
-                        new DOMParser().parseFromString(alertHtml, 'text/html').body.firstChild,
-                        noAlertsMessage
-                    );
+                    alertsContainer.insertBefore(alertHtml, noAlertsMessage);
+                    
+                    updateAlertCount();
+                }
+                // For other types, only add if not already present
+                else if (!Array.from(activeAlerts.values()).some(alert => alert.message === log.message)) {
+                    activeAlerts.set(alertId, {
+                        timestamp: log.timestamp,
+                        message: log.message,
+                        type: alertType
+                    });
+                    
+                    const alertsContainer = document.getElementById('alerts-container');
+                    const alertHtml = createAlertEntry(log.timestamp, log.message, alertType, alertId);
+                    
+                    // Insert before the "no alerts" message
+                    const noAlertsMessage = document.getElementById('no-alerts-message');
+                    alertsContainer.insertBefore(alertHtml, noAlertsMessage);
                     
                     updateAlertCount();
                 }
             }
+        }
+
+        // Helper function to create alert entry HTML
+        function createAlertEntry(timestamp, message, type, alertId) {
+            const alert = document.createElement('div');
+            alert.className = `alert-${type} mb-2 p-4 rounded-lg relative`;
+            alert.setAttribute('data-message', message);
+            alert.setAttribute('data-type', type);
+            alert.setAttribute('data-alert-id', alertId);
+            
+            alert.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-semibold">${type.charAt(0).toUpperCase() + type.slice(1)} Alert</h4>
+                        <p class="text-sm">${message}</p>
+                        <span class="text-xs text-gray-500">${timestamp}</span>
+                    </div>
+                    <button onclick="dismissAlert('${alertId}')" class="text-lg hover:text-gray-800">&times;</button>
+                </div>
+            `;
+            
+            return alert;
         }
 
         // Add message pattern tracking

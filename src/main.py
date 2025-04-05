@@ -131,23 +131,24 @@ async def get_system_log(request):
                     
                     # Process log entries to remove hostname and simplify
                     processed_logs = []
-                    seen_messages = set()  # Track unique messages
+                    seen_messages = set()  # Track unique non-warning messages
                     
                     for log_entry in data:
                         # Extract timestamp and message parts
                         match = re.match(r"(\w+ \d+ \d+:\d+:\d+) \S+ (.+)", log_entry)
                         if match:
                             timestamp, message = match.groups()
-                            # Only add if we haven't seen this exact message before
-                            if message not in seen_messages:
-                                seen_messages.add(message)
+                            # Always add WAR messages, deduplicate others
+                            if 'WAR' in message or message not in seen_messages:
+                                if 'WAR' not in message:
+                                    seen_messages.add(message)
                                 processed_logs.append({
                                     'timestamp': timestamp,
                                     'message': message,
                                     'raw': log_entry
                                 })
                     
-                    return web.json_response(processed_logs[-100:])  # Return last 100 unique messages
+                    return web.json_response(processed_logs[-100:])  # Return last 100 messages
                 else:
                     return web.json_response(
                         {'error': f'Failed to fetch system log: {response.status}'}, 
