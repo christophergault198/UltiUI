@@ -129,6 +129,48 @@
             background-color: #1a1a1a;
             border-radius: 0 0 0.5rem 0.5rem;
         }
+        .alert-entry {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 1rem;
+        }
+        .alert-error {
+            background-color: #FEE2E2;
+            border: 1px solid #FCA5A5;
+            color: #991B1B;
+        }
+        .alert-warning {
+            background-color: #FEF3C7;
+            border: 1px solid #FCD34D;
+            color: #92400E;
+        }
+        .alert-info {
+            background-color: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            color: #1E40AF;
+        }
+        .alert-timestamp {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+        .alert-message {
+            flex-grow: 1;
+        }
+        .alert-dismiss {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.25rem;
+            line-height: 1;
+            opacity: 0.6;
+            padding: 0.25rem;
+        }
+        .alert-dismiss:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -330,6 +372,20 @@
                 </div>
             </div>
 
+            <!-- Active Alerts Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">Active Alerts</h2>
+                    <span id="alerts-count" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">0 Active</span>
+                </div>
+                <div id="alerts-container" class="space-y-2">
+                    <!-- Alerts will be inserted here -->
+                    <div id="no-alerts-message" class="text-gray-500 text-center py-4">
+                        No active alerts
+                    </div>
+                </div>
+            </div>
+
             <!-- System Log Section -->
             <div class="bg-white rounded-lg shadow-md p-6 mt-8">
                 <button type="button" class="collapsible flex items-center justify-between">
@@ -361,6 +417,7 @@
         let printCoresInterval;
         let logInterval;
         let seenMessages = new Set();
+        let activeAlerts = new Map(); // Store active alerts with their IDs
 
         // Format seconds to HH:MM:SS
         function formatTime(seconds) {
@@ -663,7 +720,93 @@
             }, 3000);
         }
 
-        // Update system log
+        // Helper function to determine alert type from message
+        function getAlertType(message) {
+            const lowerMessage = message.toLowerCase();
+            if (lowerMessage.includes('error') || lowerMessage.includes('failed') || lowerMessage.includes('critical')) {
+                return 'error';
+            } else if (lowerMessage.includes('warning') || lowerMessage.includes('attention')) {
+                return 'warning';
+            }
+            return 'info';
+        }
+
+        // Create alert entry HTML
+        function createAlertEntry(timestamp, message, type, id) {
+            return `
+                <div class="alert-entry alert-${type}" data-alert-id="${id}">
+                    <div class="flex-grow">
+                        <div class="alert-message">${message}</div>
+                        <div class="alert-timestamp">${timestamp}</div>
+                    </div>
+                    <button class="alert-dismiss" onclick="dismissAlert('${id}')">&times;</button>
+                </div>
+            `;
+        }
+
+        // Dismiss alert
+        function dismissAlert(id) {
+            const alertElement = document.querySelector(`[data-alert-id="${id}"]`);
+            if (alertElement) {
+                alertElement.remove();
+                activeAlerts.delete(id);
+                updateAlertsCount();
+            }
+        }
+
+        // Update alerts count badge
+        function updateAlertsCount() {
+            const count = activeAlerts.size;
+            const alertsCount = document.getElementById('alerts-count');
+            const noAlertsMessage = document.getElementById('no-alerts-message');
+            
+            alertsCount.textContent = `${count} Active`;
+            alertsCount.className = `px-3 py-1 rounded-full text-sm font-medium ${
+                count > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+            }`;
+            
+            noAlertsMessage.style.display = count > 0 ? 'none' : 'block';
+        }
+
+        // Process log entry for alerts
+        function processLogForAlerts(log) {
+            const lowerMessage = log.message.toLowerCase();
+            const isImportant = 
+                lowerMessage.includes('error') ||
+                lowerMessage.includes('warning') ||
+                lowerMessage.includes('failed') ||
+                lowerMessage.includes('critical') ||
+                lowerMessage.includes('attention') ||
+                (lowerMessage.includes('temperature') && lowerMessage.includes('not'));
+
+            if (isImportant) {
+                const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const alertType = getAlertType(log.message);
+                
+                // Add to active alerts if not already present
+                if (!Array.from(activeAlerts.values()).some(alert => alert.message === log.message)) {
+                    activeAlerts.set(alertId, {
+                        timestamp: log.timestamp,
+                        message: log.message,
+                        type: alertType
+                    });
+                    
+                    const alertsContainer = document.getElementById('alerts-container');
+                    const alertHtml = createAlertEntry(log.timestamp, log.message, alertType, alertId);
+                    
+                    // Insert before the "no alerts" message
+                    const noAlertsMessage = document.getElementById('no-alerts-message');
+                    alertsContainer.insertBefore(
+                        new DOMParser().parseFromString(alertHtml, 'text/html').body.firstChild,
+                        noAlertsMessage
+                    );
+                    
+                    updateAlertsCount();
+                }
+            }
+        }
+
+        // Update system log (modified to include alert processing)
         async function updateSystemLog() {
             try {
                 const response = await fetch('/api/system-log');
@@ -680,6 +823,9 @@
                     if (!seenMessages.has(log.raw)) {
                         seenMessages.add(log.raw);
                         hasNewMessages = true;
+
+                        // Process for alerts
+                        processLogForAlerts(log);
 
                         const entry = document.createElement('div');
                         entry.className = 'log-entry';
