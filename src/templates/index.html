@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltiUI - Ultimaker S3 HMI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .success-message {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem;
+            background-color: #10B981;
+            color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .error-message {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem;
+            background-color: #EF4444;
+            color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">UltiUI</h1>
+            <p class="text-gray-600">Ultimaker S3 Web Interface</p>
+        </header>
+
+        <main class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-6">Printer Configuration</h2>
+            
+            <div class="mb-6">
+                <label for="printer-ip" class="block text-sm font-medium text-gray-700 mb-2">
+                    Printer IP Address
+                </label>
+                <div class="flex gap-4">
+                    <input type="text" 
+                           id="printer-ip" 
+                           class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                           placeholder="Enter printer IP address (e.g., 192.168.1.100)">
+                    <button onclick="saveConfig()" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        Save
+                    </button>
+                </div>
+            </div>
+
+            <div class="border-t pt-6">
+                <h3 class="text-lg font-medium text-gray-800 mb-4">Connection Status</h3>
+                <div id="connection-status" class="flex items-center">
+                    <div id="status-indicator" class="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+                    <span id="status-text" class="text-gray-600">Not Connected</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="success-message" class="success-message">
+        Configuration saved successfully!
+    </div>
+
+    <div id="error-message" class="error-message">
+        Error message here
+    </div>
+
+    <script>
+        // Load current configuration
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                document.getElementById('printer-ip').value = config.printer_ip || '';
+                if (config.printer_ip) {
+                    testConnection();
+                }
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                showError('Error loading configuration');
+            }
+        }
+
+        // Save configuration
+        async function saveConfig() {
+            const printerIp = document.getElementById('printer-ip').value;
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ printer_ip: printerIp }),
+                });
+                
+                if (response.ok) {
+                    showSuccess('Configuration saved successfully!');
+                    testConnection();
+                } else {
+                    const data = await response.json();
+                    showError(data.message || 'Error saving configuration');
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                showError('Error saving configuration');
+            }
+        }
+
+        // Test connection to printer
+        async function testConnection() {
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            statusIndicator.className = 'w-3 h-3 rounded-full bg-yellow-400 mr-2';
+            statusText.textContent = 'Testing connection...';
+            
+            try {
+                const response = await fetch('/api/test-connection');
+                const data = await response.json();
+                
+                if (data.connected) {
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500 mr-2';
+                    statusText.textContent = 'Connected';
+                } else {
+                    statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+                    statusText.textContent = `Not Connected: ${data.message}`;
+                }
+            } catch (error) {
+                console.error('Error testing connection:', error);
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+                statusText.textContent = 'Connection test failed';
+            }
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successMessage = document.getElementById('success-message');
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        // Load configuration when page loads
+        document.addEventListener('DOMContentLoaded', loadConfig);
+    </script>
+</body>
+</html> 
