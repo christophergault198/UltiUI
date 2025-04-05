@@ -42,8 +42,8 @@ async def test_connection(request):
 
     try:
         async with aiohttp.ClientSession() as session:
-            # Try to connect to the printer's API
-            url = f"http://{config['printer_ip']}/api/v1/system"
+            # Try to connect to the printer's camera stream
+            url = f"http://{config['printer_ip']}:8080/?action=stream"
             async with session.get(url, timeout=5) as response:
                 if response.status == 200:
                     return web.json_response({
@@ -70,6 +70,17 @@ async def test_connection(request):
             'connected': False
         })
 
+async def camera_stream(request):
+    """Proxy the camera stream from the printer"""
+    if not config['printer_ip']:
+        return web.Response(status=400, text='Printer IP not configured')
+
+    try:
+        # Instead of proxying the stream, redirect to the printer's camera stream
+        return web.HTTPFound(f"http://{config['printer_ip']}:8080/?action=stream")
+    except Exception as e:
+        return web.Response(status=500, text=str(e))
+
 async def index(request):
     """Serve the main page"""
     return web.FileResponse('src/templates/index.html')
@@ -93,6 +104,7 @@ def init_app():
     app.router.add_get('/api/config', get_config)
     app.router.add_post('/api/config', update_config)
     app.router.add_get('/api/test-connection', test_connection)
+    app.router.add_get('/api/camera/stream', camera_stream)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
