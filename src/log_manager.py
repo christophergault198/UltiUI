@@ -12,6 +12,7 @@ class LogManager:
         self.active_alerts = {}  # Store active alerts
         self.log_buffer = deque(maxlen=1000)  # Store last 1000 processed logs
         self.lock = asyncio.Lock()  # Thread safety for log processing
+        self.last_cleanup_state = None  # Track the last cleanup state
         
     async def process_log_entry(self, log_entry: str) -> Optional[Dict]:
         """Process a single log entry and return structured data"""
@@ -38,41 +39,45 @@ class LogManager:
             # Include minute in key to group messages within same minute
             group_key = f"{pattern}:{parsed_time.strftime('%Y%m%d%H%M')}"
             
-            # Get or create message group
-            if group_key in self.message_patterns:
-                group = self.message_patterns[group_key]
-                group['count'] += 1
-                group['last_timestamp'] = timestamp
-                group['raw_messages'].append(log_entry)
-            else:
-                group = {
-                    'pattern': pattern,
-                    'count': 1,
-                    'first_timestamp': timestamp,
-                    'last_timestamp': timestamp,
-                    'raw_messages': [log_entry],
-                    'parsed_time': parsed_time
+            # Special handling for cleanup messages
+            if "WAIT_FOR_CLEANUP" in message:
+                current_state = {
+                    'timestamp': timestamp,
+                    'parsed_time': parsed_time,
+                    'message': message
                 }
-                self.message_patterns[group_key] = group
+                
+                # Only process if this is a new cleanup state or significant time has passed
+                if not self.last_cleanup_state or \
+                   self.last_cleanup_state['timestamp'] != timestamp:
+                    self.last_cleanup_state = current_state
+                else:
+                    return None
             
-            return group
+            return {
+                'timestamp': timestamp,
+                'message': message,
+                'raw': log_entry,
+                'pattern': pattern,
+                'group_key': group_key
+            }
 
     async def process_logs(self, logs: List[str]) -> List[Dict]:
-        """Process multiple log entries and return structured data"""
+        """Process a list of log entries and return structured data"""
+        processed_entries = []
         processed_groups = {}
-        
-        # Process each log entry
+
         for log_entry in logs:
-            group = await self.process_log_entry(log_entry)
-            if group:
-                group_key = f"{group['pattern']}:{group['parsed_time'].strftime('%Y%m%d%H%M')}"
-                processed_groups[group_key] = group
-        
-        # Convert groups to list and sort by timestamp
+            entry = await self.process_log_entry(log_entry)
+            if entry:
+                # Use group_key to deduplicate similar messages within the same minute
+                if entry['group_key'] not in processed_groups:
+                    processed_groups[entry['group_key']] = entry
+
         result = []
-        for group in processed_groups.values():
+        for entry in processed_groups.values():
             # Get the base message without variable parts
-            base_message = self.get_base_message(group['raw_messages'][0])
+            base_message = self.get_base_message(entry['raw'])
             
             # Determine message type
             msg_type = 'info'
@@ -82,15 +87,14 @@ class LogManager:
                 msg_type = 'error'
             
             # Format the entry
-            entry = {
-                'timestamp': group['first_timestamp'],
+            formatted_entry = {
+                'timestamp': entry['timestamp'],
                 'message': base_message,
                 'type': msg_type,
-                'occurrences': group['count'],
-                'raw': group['raw_messages'][0],  # Keep first raw message for reference
-                'details': self.get_message_details(group['raw_messages'])
+                'occurrences': 1,
+                'raw': entry['raw']
             }
-            result.append(entry)
+            result.append(formatted_entry)
         
         # Sort by parsed timestamp, newest first
         result.sort(key=lambda x: datetime.strptime(x['timestamp'], '%b %d %H:%M:%S'), reverse=True)
@@ -141,43 +145,38 @@ class LogManager:
         return None
     
     def get_message_pattern(self, message: str) -> str:
-        """Extract a pattern from a message for grouping similar messages"""
-        # Remove timestamp and hostname
-        message = re.sub(r'^\w+ \d+ \d+:\d+:\d+ \S+ ', '', message)
-        
-        # Extract service name and message type
-        service_match = re.search(r'^(\w+)\[\d+\]:\s*((?:WAR|INF|ERR)\s*-?\s*)?(.+)', message)
-        if service_match:
-            service, msg_type, content = service_match.groups()
-            msg_type = msg_type.strip(' -:') if msg_type else 'INFO'
-            
-            # Remove variable parts from content
-            content = re.sub(r'\[\d+\]', '[PID]', content)
-            content = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', 'IP', content)
-            
-            return f"{service} {msg_type}: {content}"
-        
-        return message
+        """Extract a pattern from the message by replacing variable parts with placeholders"""
+        # Replace timestamps
+        pattern = re.sub(r'\d{2}:\d{2}:\d{2}', 'TIME', message)
+        # Replace numbers
+        pattern = re.sub(r'\d+\.\d+', 'NUM', pattern)
+        pattern = re.sub(r'\d+', 'NUM', pattern)
+        # Replace UUIDs and other hex strings
+        pattern = re.sub(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', 'UUID', pattern)
+        pattern = re.sub(r'0x[0-9a-f]+', 'HEX', pattern)
+        return pattern
     
     def get_recent_logs(self, limit: int = 100) -> List[Dict]:
         """Get the most recent processed logs"""
         return list(self.log_buffer)[-limit:]
     
     def clear_old_data(self):
-        """Clear old data to prevent memory growth"""
+        """Clear old data from tracking structures"""
         current_time = datetime.now()
-        old_patterns = []
+        # Clear message patterns older than 1 hour
+        self.message_patterns = {
+            k: v for k, v in self.message_patterns.items()
+            if (current_time - v.get('parsed_time', current_time)).total_seconds() < 3600
+        }
         
-        for key, group in self.message_patterns.items():
+        # Clear last cleanup state if it's older than 5 minutes
+        if self.last_cleanup_state:
             try:
-                time_diff = current_time - group['parsed_time']
-                if time_diff.total_seconds() > 3600:  # Remove patterns older than 1 hour
-                    old_patterns.append(key)
-            except (KeyError, TypeError):
-                continue
-                
-        for key in old_patterns:
-            del self.message_patterns[key]
+                time_diff = (current_time - self.last_cleanup_state['parsed_time']).total_seconds()
+                if time_diff > 300:  # 5 minutes
+                    self.last_cleanup_state = None
+            except (ValueError, TypeError, KeyError):
+                self.last_cleanup_state = None
         
         if len(self.seen_messages) > 10000:
             self.seen_messages.clear()

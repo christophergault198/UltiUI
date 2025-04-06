@@ -1831,9 +1831,12 @@
                 }
             }
 
-            // Check for build completion
+            // Check for build completion - use timestamp from log
             if (log.message.includes('WAIT_FOR_CLEANUP')) {
-                const timestamp = new Date().toLocaleTimeString();
+                // Convert the timestamp to a more readable format
+                const logDate = new Date(`2024 ${log.timestamp}`);
+                const timestamp = logDate.toLocaleTimeString();
+                removeAlertsByType('build-complete');
                 addAlert('info', 'Build Complete', `Build has completed and is waiting for cleanup at ${timestamp}`, 'build-complete', true);
             }
 
