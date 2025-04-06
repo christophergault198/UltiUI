@@ -1064,7 +1064,7 @@
                     </div>
 
                     <!-- Statistics -->
-                    <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="grid grid-cols-2 gap-4 mb-6">
                         <div class="stat-card p-4">
                             <div class="text-sm text-gray-600">Min Deviation</div>
                             <div id="min-deviation" class="text-xl font-semibold">0.000 mm</div>
@@ -1072,10 +1072,6 @@
                         <div class="stat-card p-4">
                             <div class="text-sm text-gray-600">Max Deviation</div>
                             <div id="max-deviation" class="text-xl font-semibold">0.000 mm</div>
-                        </div>
-                        <div class="stat-card p-4">
-                            <div class="text-sm text-gray-600">Average Deviation</div>
-                            <div id="avg-deviation" class="text-xl font-semibold">0.000 mm</div>
                         </div>
                     </div>
 
@@ -2603,7 +2599,6 @@
                     console.log('Updating statistics:', data.statistics);  // Debug log
                     document.getElementById('min-deviation').textContent = `${data.statistics.min_height.toFixed(3)} mm`;
                     document.getElementById('max-deviation').textContent = `${data.statistics.max_height.toFixed(3)} mm`;
-                    document.getElementById('avg-deviation').textContent = `${data.statistics.avg_height.toFixed(3)} mm`;
                 }
                 
                 // Update analysis text

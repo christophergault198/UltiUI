@@ -8,6 +8,7 @@ import aiohttp_cors
 import re
 from datetime import datetime
 from log_manager import LogManager
+import numpy as np
 
 # Load environment variables
 load_dotenv()
@@ -367,24 +368,24 @@ async def get_probing_report(request):
                                     continue
                             
                             if points:
-                                import numpy as np
                                 points = np.array(points)
                                 z_values = np.array(z_values)
                                 
                                 # Calculate statistics
-                                z_min = float(np.min(z_values))
-                                z_max = float(np.max(z_values))
                                 z_mean = float(np.mean(z_values))
+                                z_min = float(np.min(z_values - z_mean))  # Relative min deviation
+                                z_max = float(np.max(z_values - z_mean))  # Relative max deviation
                                 z_std = float(np.std(z_values))
-                                z_variance = z_max - z_min
+                                z_variance = z_max - z_min  # This is now the total relative variance
                                 
                                 # Analyze bed tilt
                                 x_correlation = float(np.corrcoef(points[:, 0], z_values)[0, 1])
                                 y_correlation = float(np.corrcoef(points[:, 1], z_values)[0, 1])
                                 
                                 # Find min/max point locations
-                                min_idx = np.argmin(z_values)
-                                max_idx = np.argmax(z_values)
+                                relative_values = z_values - z_mean
+                                min_idx = np.argmin(relative_values)
+                                max_idx = np.argmax(relative_values)
                                 min_point = points[min_idx].tolist()
                                 max_point = points[max_idx].tolist()
                                 
@@ -435,18 +436,18 @@ async def get_probing_report(request):
                                         {
                                             'x': float(point[0]),
                                             'y': float(point[1]),
-                                            'height': float(z),
-                                            'deviation': float(z - z_mean)
+                                            'height': float(z - z_mean),  # Relative height
+                                            'deviation': float(z - z_mean)  # Same as height for clarity
                                         }
                                         for point, z in zip(points, z_values)
                                     ],
                                     'statistics': {
-                                        'min_height': z_min,
-                                        'max_height': z_max,
-                                        'avg_height': z_mean,
+                                        'min_height': z_min,  # Now relative to mean
+                                        'max_height': z_max,  # Now relative to mean
                                         'std_deviation': z_std,
                                         'max_deviation': z_variance,
-                                        'point_count': len(points)
+                                        'point_count': len(points),
+                                        'reference_height': float(z_mean)  # Include the reference height
                                     },
                                     'analysis': {
                                         'assessment': assessment,
