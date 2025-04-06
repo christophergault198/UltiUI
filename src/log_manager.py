@@ -3,6 +3,7 @@ import re
 from typing import Dict, List, Set, Optional
 import asyncio
 from collections import deque
+from operator import itemgetter
 
 class LogManager:
     def __init__(self):
@@ -22,127 +23,141 @@ class LogManager:
                 
             timestamp, message = match.groups()
             
-            # Determine message type and core content
-            message_type = 'info'
-            core_message = message
-            
-            # Handle different message types
-            if 'WAR' in message:
-                warning_match = re.match(r"PrinterService\[\d+\]:WAR - ([^:]+)", message)
-                if warning_match:
-                    message_type = 'warning'
-                    core_message = f"WAR - {warning_match.group(1)}"
-            elif 'Build Complete' in message:
-                message_type = 'info'
-                core_message = 'Build Complete'
-            elif 'ERROR' in message.upper():
-                message_type = 'error'
-                core_message = message
-            elif message.startswith('Okuda'):
-                message_type = 'warning'
-                # Extract core message without timestamp for Okuda messages
-                core_message = re.sub(r'\[\d+\]:', ':', message)
-            
-            # Create message pattern and get details
+            # Parse timestamp for sorting
+            try:
+                parsed_time = datetime.strptime(timestamp, '%b %d %H:%M:%S')
+                # Add current year since logs don't include it
+                parsed_time = parsed_time.replace(year=datetime.now().year)
+            except ValueError:
+                return None
+
+            # Create message pattern for grouping
             pattern = self.get_message_pattern(message)
-            details = self.get_message_details(message, pattern)
             
-            # Create unique pattern key that includes more context
-            pattern_key = f"{pattern}:{timestamp}"  # Use full timestamp for more granular grouping
+            # Create unique key for this message group
+            # Include minute in key to group messages within same minute
+            group_key = f"{pattern}:{parsed_time.strftime('%Y%m%d%H%M')}"
             
-            # Update pattern tracking
-            if pattern_key in self.message_patterns:
-                self.message_patterns[pattern_key]['count'] += 1
-                self.message_patterns[pattern_key]['last_timestamp'] = timestamp
-                if details and details not in self.message_patterns[pattern_key]['details']:
-                    self.message_patterns[pattern_key]['details'].append(details)
+            # Get or create message group
+            if group_key in self.message_patterns:
+                group = self.message_patterns[group_key]
+                group['count'] += 1
+                group['last_timestamp'] = timestamp
+                group['raw_messages'].append(log_entry)
             else:
-                self.message_patterns[pattern_key] = {
+                group = {
+                    'pattern': pattern,
                     'count': 1,
+                    'first_timestamp': timestamp,
                     'last_timestamp': timestamp,
-                    'details': [details] if details else [],
-                    'type': message_type
+                    'raw_messages': [log_entry],
+                    'parsed_time': parsed_time
                 }
+                self.message_patterns[group_key] = group
             
-            # Create log entry
-            log_entry = {
-                'timestamp': timestamp,
-                'message': message,
-                'raw': log_entry,
-                'type': message_type,
-                'pattern': pattern,
-                'pattern_key': pattern_key,
-                'occurrences': self.message_patterns[pattern_key]['count'],
-                'details': self.message_patterns[pattern_key]['details'] if details else None
-            }
-            
-            # Add to buffer if it's a new message
-            self.log_buffer.append(log_entry)
-            return log_entry
-    
+            return group
+
     async def process_logs(self, logs: List[str]) -> List[Dict]:
         """Process multiple log entries and return structured data"""
-        processed_logs = []
+        processed_groups = {}
+        
+        # Process each log entry
         for log_entry in logs:
-            result = await self.process_log_entry(log_entry)
-            if result:
-                processed_logs.append(result)
-        return processed_logs
+            group = await self.process_log_entry(log_entry)
+            if group:
+                group_key = f"{group['pattern']}:{group['parsed_time'].strftime('%Y%m%d%H%M')}"
+                processed_groups[group_key] = group
+        
+        # Convert groups to list and sort by timestamp
+        result = []
+        for group in processed_groups.values():
+            # Get the base message without variable parts
+            base_message = self.get_base_message(group['raw_messages'][0])
+            
+            # Determine message type
+            msg_type = 'info'
+            if 'WAR' in base_message:
+                msg_type = 'warning'
+            elif 'ERR' in base_message:
+                msg_type = 'error'
+            
+            # Format the entry
+            entry = {
+                'timestamp': group['first_timestamp'],
+                'message': base_message,
+                'type': msg_type,
+                'occurrences': group['count'],
+                'raw': group['raw_messages'][0],  # Keep first raw message for reference
+                'details': self.get_message_details(group['raw_messages'])
+            }
+            result.append(entry)
+        
+        # Sort by parsed timestamp, newest first
+        result.sort(key=lambda x: datetime.strptime(x['timestamp'], '%b %d %H:%M:%S'), reverse=True)
+        
+        return result
+    
+    def get_base_message(self, message: str) -> str:
+        """Get the base message without variable parts"""
+        # Extract timestamp and actual message
+        match = re.match(r"\w+ \d+ \d+:\d+:\d+ \S+ (.+)", message)
+        if not match:
+            return message
+            
+        base_msg = match.group(1)
+        
+        # Handle special cases
+        if 'MJPG-streamer' in base_msg and 'serving client' in base_msg:
+            # Remove duplicate IP addresses
+            base_msg = re.sub(r'\n\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', '', base_msg)
+        
+        return base_msg
+    
+    def get_message_details(self, raw_messages: List[str]) -> Optional[List[str]]:
+        """Extract relevant details from a group of messages"""
+        if not raw_messages:
+            return None
+            
+        # Get unique IP addresses for MJPG-streamer messages
+        if 'MJPG-streamer' in raw_messages[0] and 'serving client' in raw_messages[0]:
+            ips = set()
+            for msg in raw_messages:
+                ip_match = re.search(r'serving client: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', msg)
+                if ip_match:
+                    ips.add(ip_match.group(1))
+            if ips:
+                return [f"Clients: {', '.join(sorted(ips))}"]
+        
+        # Extract error details for warning messages
+        elif 'Failed to fetch' in raw_messages[0]:
+            urls = set()
+            for msg in raw_messages:
+                url_match = re.search(r'Failed to fetch .+ at (http[^\s]+)', msg)
+                if url_match:
+                    urls.add(url_match.group(1))
+            if urls:
+                return [f"Failed endpoints: {', '.join(sorted(urls))}"]
+        
+        return None
     
     def get_message_pattern(self, message: str) -> str:
         """Extract a pattern from a message for grouping similar messages"""
-        # Special cases for different message types
-        if 'MJPG-streamer' in message and 'serving client' in message:
-            client_match = re.search(r"serving client: ([^\s]+)", message)
-            if client_match:
-                return f'MJPG-streamer serving client: {client_match.group(1)}'
-            return 'MJPG-streamer serving client'
-            
-        if 'PrintCore' in message and 'extruded' in message:
-            core_match = re.search(r"PrintCore (\d+)", message)
-            if core_match:
-                return f'PrintCore {core_match.group(1)} extrusion update'
-            return 'PrintCore extrusion update'
-            
-        if 'Queueing tag for hotend' in message:
-            hotend_match = re.search(r"hotend (\d+)", message)
-            if hotend_match:
-                return f'NFC tag queue update for hotend {hotend_match.group(1)}'
-            return 'NFC tag queue update'
-            
-        if 'Writing tag' in message:
-            hotend_match = re.search(r"hotend index # (\d+)", message)
-            if hotend_match:
-                return f'NFC tag write for hotend {hotend_match.group(1)}'
-            return 'NFC tag write'
-            
-        # For other messages, keep more of the original content
-        # but remove highly variable parts
+        # Remove timestamp and hostname
+        message = re.sub(r'^\w+ \d+ \d+:\d+:\d+ \S+ ', '', message)
         
-        # Extract and remove process IDs
-        message = re.sub(r'\[\d+\]', '[PID]', message)
-        
-        # Extract and remove timestamps
-        message = re.sub(r'\d{2}:\d{2}:\d{2}', 'TIME', message)
-        
-        # Extract and remove IP addresses
-        message = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', 'IP', message)
-        
-        # Extract and remove UUIDs
-        message = re.sub(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', 'UUID', message)
+        # Extract service name and message type
+        service_match = re.search(r'^(\w+)\[\d+\]:\s*((?:WAR|INF|ERR)\s*-?\s*)?(.+)', message)
+        if service_match:
+            service, msg_type, content = service_match.groups()
+            msg_type = msg_type.strip(' -:') if msg_type else 'INFO'
+            
+            # Remove variable parts from content
+            content = re.sub(r'\[\d+\]', '[PID]', content)
+            content = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', 'IP', content)
+            
+            return f"{service} {msg_type}: {content}"
         
         return message
-    
-    def get_message_details(self, message: str, pattern: str) -> Optional[str]:
-        """Extract relevant details from a message based on its pattern"""
-        if pattern == 'MJPG-streamer serving client':
-            client_match = re.search(r"serving client: ([^\s]+)", message)
-            return client_match.group(1) if client_match else None
-        elif pattern == 'PrintCore extrusion update':
-            match = re.search(r"PrintCore (\d+) extruded ([\d.]+) mm in ([\d.]+) s, remaining length = (\d+) mm", message)
-            if match:
-                return f"Core {match.group(1)}: {match.group(2)}mm in {match.group(3)}s ({match.group(4)}mm remaining)"
-        return None
     
     def get_recent_logs(self, limit: int = 100) -> List[Dict]:
         """Get the most recent processed logs"""
@@ -150,6 +165,20 @@ class LogManager:
     
     def clear_old_data(self):
         """Clear old data to prevent memory growth"""
+        current_time = datetime.now()
+        old_patterns = []
+        
+        for key, group in self.message_patterns.items():
+            try:
+                time_diff = current_time - group['parsed_time']
+                if time_diff.total_seconds() > 3600:  # Remove patterns older than 1 hour
+                    old_patterns.append(key)
+            except (KeyError, TypeError):
+                continue
+                
+        for key in old_patterns:
+            del self.message_patterns[key]
+        
         if len(self.seen_messages) > 10000:
             self.seen_messages.clear()
             self.seen_messages.update(log['raw'] for log in self.log_buffer)

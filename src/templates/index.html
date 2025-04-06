@@ -280,19 +280,41 @@
             line-height: 1.5;
         }
         .log-entry {
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1rem;
             border-bottom: 1px solid #2d2d2d;
-            color: #e5e5e5;
+            font-family: monospace;
+            display: flex;
+            gap: 1rem;
+            align-items: start;
         }
         .log-entry:last-child {
             border-bottom: none;
         }
         .log-timestamp {
-            color: #9ca3af;
-            margin-right: 0.5rem;
+            color: #6B7280;
+            white-space: nowrap;
         }
         .log-message {
-            color: #e5e5e5;
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .log-count {
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            font-size: 0.85em;
+            background-color: #374151;
+            color: #9CA3AF;
+            white-space: nowrap;
+        }
+        .log-entry.type-info .log-message {
+            color: #93C5FD;  /* Light blue for info */
+        }
+        .log-entry.type-warning .log-message {
+            color: #FCD34D;  /* Yellow for warnings */
+        }
+        .log-entry.type-error .log-message {
+            color: #F87171;  /* Red for errors */
         }
         .collapsible {
             cursor: pointer;
@@ -1917,7 +1939,11 @@
         // Add message pattern tracking
         let messagePatterns = new Map(); // Store message patterns and their variations
 
-        // Update system log with improved message consolidation
+        // Add status tracking variables
+        let lastLogTimestamp = null;
+        let statusCheckInterval;
+
+        // Update the updateSystemLog function
         async function updateSystemLog() {
             try {
                 const response = await fetch('/api/system-log');
@@ -1930,6 +1956,13 @@
                 const container = document.getElementById('log-container');
                 let hasNewMessages = false;
 
+                // Sort logs by timestamp, newest first
+                logs.sort((a, b) => {
+                    const timeA = new Date(`2024 ${a.timestamp}`);
+                    const timeB = new Date(`2024 ${b.timestamp}`);
+                    return timeB - timeA;
+                });
+
                 for (const log of logs) {
                     if (!seenMessages.has(log.raw)) {
                         seenMessages.add(log.raw);
@@ -1938,73 +1971,33 @@
                         // Process for alerts
                         processLogForAlerts(log);
 
-                        // Create or update log entry
-                        const pattern = log.pattern;
-                        const details = log.details;
+                        // Create log entry
+                        const entry = document.createElement('div');
+                        entry.className = `log-entry type-${log.type}`;
                         
-                        if (messagePatterns.has(pattern)) {
-                            const patternData = messagePatterns.get(pattern);
-                            patternData.count = log.occurrences;
-                            patternData.lastTimestamp = log.timestamp;
-                            
-                            // Update existing element
-                            const element = patternData.element;
-                            element.querySelector('.log-timestamp').textContent = log.timestamp;
-                            const countBadge = element.querySelector('.log-count');
-                            countBadge.textContent = `(${log.occurrences}×)`;
-                            countBadge.style.display = 'inline';
-
-                            // Update details if needed
-                            if (details) {
-                                const detailsElement = element.querySelector('.log-details');
-                                if (detailsElement) {
-                                    detailsElement.innerHTML = details
-                                        .map(d => `<div class="text-gray-400 text-sm ml-8">${d}</div>`)
-                                        .join('');
-                                }
-                            }
-                            
-                            // Move to top
-                            container.insertBefore(element, container.firstChild);
-                        } else {
-                            // Create new element for unique message pattern
-                            const entry = document.createElement('div');
-                            entry.className = 'log-entry';
-                            entry.innerHTML = `
-                                <div>
-                                    <span class="log-timestamp">${log.timestamp}</span>
-                                    <span class="log-count" style="display: ${log.occurrences > 1 ? 'inline' : 'none'}; color: #6B7280; margin: 0 0.5rem;">(${log.occurrences}×)</span>
-                                    <span class="log-message">${log.message}</span>
-                                </div>
-                                ${details ? `<div class="log-details">${details.map(d => `<div class="text-gray-400 text-sm ml-8">${d}</div>`).join('')}</div>` : ''}
-                            `;
-                            container.insertBefore(entry, container.firstChild);
-                            
-                            // Store in patterns map
-                            messagePatterns.set(pattern, {
-                                count: log.occurrences,
-                                lastTimestamp: log.timestamp,
-                                element: entry,
-                                details: details || []
-                            });
-                        }
+                        // Format the log message
+                        const formattedMessage = log.message
+                            .replace(/\[(\d+)\]/g, '<span class="text-gray-500">[$1]</span>')
+                            .replace(/(WAR|INF|ERR)(\s*-\s*)/g, '<span class="text-gray-500">$1</span>$2');
+                        
+                        entry.innerHTML = `
+                            <span class="log-timestamp">${log.timestamp}</span>
+                            ${log.occurrences > 1 ? `<span class="log-count">(${log.occurrences}×)</span>` : ''}
+                            <span class="log-message">${formattedMessage}</span>
+                        `;
+                        
+                        container.insertBefore(entry, container.firstChild);
                     }
                 }
 
-                // Keep only the last 100 unique messages in the DOM
+                // Keep only the last 100 messages in the DOM
                 while (container.children.length > 100) {
-                    const lastChild = container.lastChild;
-                    const patternToRemove = Array.from(messagePatterns.entries())
-                        .find(([_, value]) => value.element === lastChild);
-                    if (patternToRemove) {
-                        messagePatterns.delete(patternToRemove[0]);
-                    }
-                    container.removeChild(lastChild);
+                    container.removeChild(container.lastChild);
                 }
 
-                // Update status indicator
+                // Update status only if we got new messages
+                const status = document.getElementById('log-status');
                 if (hasNewMessages) {
-                    const status = document.getElementById('log-status');
                     status.textContent = 'Active';
                     status.className = 'ml-4 px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full';
                     setTimeout(() => {
@@ -2015,8 +2008,53 @@
 
             } catch (error) {
                 console.error('Error updating system log:', error);
+                const status = document.getElementById('log-status');
+                status.textContent = 'Error';
+                status.className = 'ml-4 px-3 py-1 text-sm font-medium bg-red-100 text-red-800 rounded-full';
             }
         }
+
+        // Function to update log status display
+        function updateLogStatus(status) {
+            const statusElement = document.getElementById('log-status');
+            switch (status) {
+                case 'active':
+                    statusElement.textContent = 'Active';
+                    statusElement.className = 'ml-4 px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full';
+                    break;
+                case 'idle':
+                    statusElement.textContent = 'Idle';
+                    statusElement.className = 'ml-4 px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full';
+                    break;
+                case 'error':
+                    statusElement.textContent = 'Error';
+                    statusElement.className = 'ml-4 px-3 py-1 text-sm font-medium bg-red-100 text-red-800 rounded-full';
+                    break;
+            }
+        }
+
+        // Function to check log activity
+        function checkLogActivity() {
+            if (lastLogTimestamp) {
+                const currentTime = new Date();
+                const timeSinceLastLog = currentTime - lastLogTimestamp;
+                // If no new logs in 5 seconds, mark as idle
+                if (timeSinceLastLog > 5000) {
+                    updateLogStatus('idle');
+                    clearInterval(statusCheckInterval);
+                    statusCheckInterval = null;
+                }
+            }
+        }
+
+        // Initialize status check on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... existing initialization code ...
+            
+            // Start log updates
+            updateSystemLog();
+            setInterval(updateSystemLog, 1000);
+        });
 
         // Initialize flow charts
         function initFlowCharts() {
