@@ -1087,6 +1087,20 @@
                         </div>
                     </div>
 
+                    <!-- Tolerance Control -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                        <h3 class="text-lg font-medium text-gray-800 mb-2">Tolerance Settings</h3>
+                        <div class="flex items-center space-x-4">
+                            <label for="tolerance-slider" class="text-sm text-gray-600">Tolerance Threshold:</label>
+                            <input type="range" id="tolerance-slider" min="0.1" max="2.0" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <span id="tolerance-value" class="text-sm font-medium text-gray-800">1.0 mm</span>
+                            <button id="save-tolerance" class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                                Save
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Adjust the acceptable tolerance for bed leveling. Higher values are more lenient.</p>
+                    </div>
+
                     <!-- Bed Level Visualization -->
                     <div class="border rounded-lg p-4 bg-gray-50">
                         <div class="mb-4">
@@ -2957,6 +2971,71 @@
                 
                 localStorage.setItem('layout', layout);
             }
+        });
+
+        // Handle tolerance threshold changes
+        async function loadToleranceThreshold() {
+            try {
+                const response = await fetch('/api/tolerance-threshold');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const toleranceSlider = document.getElementById('tolerance-slider');
+                const toleranceValue = document.getElementById('tolerance-value');
+                
+                toleranceSlider.value = data.tolerance_threshold;
+                toleranceValue.textContent = `${data.tolerance_threshold} mm`;
+            } catch (error) {
+                console.error('Error loading tolerance threshold:', error);
+            }
+        }
+
+        async function saveToleranceThreshold() {
+            try {
+                const toleranceSlider = document.getElementById('tolerance-slider');
+                const toleranceValue = document.getElementById('tolerance-value');
+                const newTolerance = parseFloat(toleranceSlider.value);
+                
+                const response = await fetch('/api/tolerance-threshold', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ tolerance_threshold: newTolerance }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                toleranceValue.textContent = `${data.tolerance_threshold} mm`;
+                
+                // Refresh the probing report to apply the new tolerance
+                await updateProbingReport();
+                
+                // Show success message
+                addAlert('success', 'Settings', 'Tolerance threshold updated successfully', 'settings');
+            } catch (error) {
+                console.error('Error saving tolerance threshold:', error);
+                addAlert('error', 'Settings', 'Failed to update tolerance threshold', 'settings');
+            }
+        }
+
+        // Update tolerance value display when slider changes
+        document.getElementById('tolerance-slider').addEventListener('input', function() {
+            document.getElementById('tolerance-value').textContent = `${this.value} mm`;
+        });
+
+        // Save tolerance when button is clicked
+        document.getElementById('save-tolerance').addEventListener('click', saveToleranceThreshold);
+
+        // Load tolerance threshold on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadToleranceThreshold();
+            // ... existing code ...
         });
     </script>
 </body>

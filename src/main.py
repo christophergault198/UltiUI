@@ -14,7 +14,8 @@ load_dotenv()
 
 # Global configuration
 config = {
-    'printer_ip': os.getenv('PRINTER_IP', '')
+    'printer_ip': os.getenv('PRINTER_IP', ''),
+    'tolerance_threshold': 1.0  # Default tolerance threshold in mm
 }
 
 # Initialize log manager as a global instance
@@ -388,15 +389,18 @@ async def get_probing_report(request):
                                 max_point = points[max_idx].tolist()
                                 
                                 # Determine bed leveling status
-                                if z_variance < 0.1:
+                                tolerance = config['tolerance_threshold']
+                                half_tolerance = tolerance / 2
+                                
+                                if z_variance < half_tolerance:
                                     assessment = "well-leveled"
-                                    message = "Bed is well-leveled (variance < 0.1mm)"
-                                elif z_variance < 0.2:
+                                    message = f"Bed is well-leveled (variance < {half_tolerance:.1f}mm)"
+                                elif z_variance < tolerance:
                                     assessment = "acceptable"
-                                    message = "Bed leveling is acceptable but could be improved"
+                                    message = f"Bed leveling is acceptable but could be improved"
                                 else:
                                     assessment = "needs attention"
-                                    message = "Bed requires leveling attention (variance > 0.2mm)"
+                                    message = f"Bed requires leveling attention (variance > {tolerance:.1f}mm)"
                                 
                                 # Generate recommendations
                                 recommendations = []
@@ -412,14 +416,14 @@ async def get_probing_report(request):
                                         else:
                                             recommendations.append("Bed appears tilted up towards the front - adjust front leveling screws slightly lower")
                                 
-                                if z_variance > 0.1:
-                                    if z_variance > 0.2:
+                                if z_variance > half_tolerance:
+                                    if z_variance > tolerance:
                                         recommendations.append("Perform a complete bed leveling procedure")
                                         recommendations.append("Focus on the areas with extreme values first")
                                     else:
                                         recommendations.append("Fine-tune the leveling near the highest and lowest points")
                                 
-                                if z_std > 0.1:
+                                if z_std > half_tolerance:
                                     recommendations.append("Check for debris or buildup on the bed surface")
                                     recommendations.append("Consider cleaning the bed with IPA")
                                 
@@ -467,8 +471,8 @@ async def get_probing_report(request):
                                         'bed': bed_temp,
                                         'nozzle': nozzle_temp
                                     },
-                                    'tolerance_threshold': 0.1,  # 0.1mm tolerance for visualization
-                                    'out_of_tolerance': z_variance >= 0.2
+                                    'tolerance_threshold': config['tolerance_threshold'],  # Use config value
+                                    'out_of_tolerance': z_variance >= config['tolerance_threshold']
                                 }
                                 
                                 print(f"Processed {len(points)} probe points")
@@ -506,6 +510,27 @@ async def get_probing_report(request):
         return web.json_response({
             'error': f'Failed to fetch probing report: {str(e)}'
         }, status=500)
+
+@routes.get('/api/tolerance-threshold')
+async def get_tolerance_threshold(request):
+    """Get the current tolerance threshold"""
+    return web.json_response({'tolerance_threshold': config['tolerance_threshold']})
+
+@routes.post('/api/tolerance-threshold')
+async def update_tolerance_threshold(request):
+    """Update the tolerance threshold"""
+    try:
+        data = await request.json()
+        if 'tolerance_threshold' in data:
+            new_tolerance = float(data['tolerance_threshold'])
+            if new_tolerance <= 0:
+                return web.json_response({'error': 'Tolerance threshold must be positive'}, status=400)
+            
+            config['tolerance_threshold'] = new_tolerance
+            return web.json_response({'status': 'success', 'tolerance_threshold': new_tolerance})
+        return web.json_response({'error': 'Invalid request data'}, status=400)
+    except Exception as e:
+        return web.json_response({'error': str(e)}, status=500)
 
 async def get_config(request):
     """Get current configuration"""
@@ -607,6 +632,8 @@ def init_app():
     app.router.add_get('/api/material-remaining', get_material_remaining)
     app.router.add_get('/api/toolhead-calibration', get_toolhead_calibration)
     app.router.add_get('/api/probing-report', get_probing_report)
+    app.router.add_get('/api/tolerance-threshold', get_tolerance_threshold)
+    app.router.add_post('/api/tolerance-threshold', update_tolerance_threshold)
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
