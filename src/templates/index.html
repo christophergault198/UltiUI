@@ -1917,44 +1917,6 @@
         // Add message pattern tracking
         let messagePatterns = new Map(); // Store message patterns and their variations
 
-        // Helper function to get message pattern
-        function getMessagePattern(message) {
-            // Special cases for different message types
-            if (message.includes('MJPG-streamer') && message.includes('serving client')) {
-                return 'MJPG-streamer serving client';
-            }
-            if (message.includes('PrintCore') && message.includes('extruded')) {
-                return 'PrintCore extrusion update';
-            }
-            if (message.includes('Queueing tag for hotend')) {
-                return 'NFC tag queue update';
-            }
-            if (message.includes('Writing tag')) {
-                return 'NFC tag write';
-            }
-            // Default case - use full message as pattern
-            return message;
-        }
-
-        // Helper function to extract key details from message
-        function getMessageDetails(message, pattern) {
-            switch (pattern) {
-                case 'MJPG-streamer serving client':
-                    const clientMatch = message.match(/serving client: ([^\s]+)/);
-                    return clientMatch ? clientMatch[1] : 'unknown client';
-                case 'PrintCore extrusion update':
-                    const extrusionMatch = message.match(/PrintCore (\d+) extruded ([\d.]+) mm in ([\d.]+) s, remaining length = (\d+) mm/);
-                    return extrusionMatch ? 
-                        `Core ${extrusionMatch[1]}: ${extrusionMatch[2]}mm in ${extrusionMatch[3]}s (${extrusionMatch[4]}mm remaining)` : 
-                        'unknown extrusion';
-                case 'NFC tag queue update':
-                case 'NFC tag write':
-                    return ''; // Don't show details for NFC messages
-                default:
-                    return '';
-            }
-        }
-
         // Update system log with improved message consolidation
         async function updateSystemLog() {
             try {
@@ -1968,7 +1930,7 @@
                 const container = document.getElementById('log-container');
                 let hasNewMessages = false;
 
-                for (const log of logs.reverse()) {
+                for (const log of logs) {
                     if (!seenMessages.has(log.raw)) {
                         seenMessages.add(log.raw);
                         hasNewMessages = true;
@@ -1976,35 +1938,29 @@
                         // Process for alerts
                         processLogForAlerts(log);
 
-                        // Get message pattern and details
-                        const pattern = getMessagePattern(log.message);
-                        const details = getMessageDetails(log.message, pattern);
+                        // Create or update log entry
+                        const pattern = log.pattern;
+                        const details = log.details;
                         
                         if (messagePatterns.has(pattern)) {
                             const patternData = messagePatterns.get(pattern);
-                            patternData.count++;
+                            patternData.count = log.occurrences;
                             patternData.lastTimestamp = log.timestamp;
                             
                             // Update existing element
                             const element = patternData.element;
                             element.querySelector('.log-timestamp').textContent = log.timestamp;
                             const countBadge = element.querySelector('.log-count');
-                            countBadge.textContent = `(${patternData.count}×)`;
+                            countBadge.textContent = `(${log.occurrences}×)`;
                             countBadge.style.display = 'inline';
 
                             // Update details if needed
                             if (details) {
                                 const detailsElement = element.querySelector('.log-details');
                                 if (detailsElement) {
-                                    if (!patternData.details.includes(details)) {
-                                        patternData.details.push(details);
-                                        if (patternData.details.length > 5) {
-                                            patternData.details.shift(); // Keep only last 5 variations
-                                        }
-                                        detailsElement.innerHTML = patternData.details
-                                            .map(d => `<div class="text-gray-400 text-sm ml-8">${d}</div>`)
-                                            .join('');
-                                    }
+                                    detailsElement.innerHTML = details
+                                        .map(d => `<div class="text-gray-400 text-sm ml-8">${d}</div>`)
+                                        .join('');
                                 }
                             }
                             
@@ -2017,19 +1973,19 @@
                             entry.innerHTML = `
                                 <div>
                                     <span class="log-timestamp">${log.timestamp}</span>
-                                    <span class="log-count" style="display: none; color: #6B7280; margin: 0 0.5rem;">(1×)</span>
+                                    <span class="log-count" style="display: ${log.occurrences > 1 ? 'inline' : 'none'}; color: #6B7280; margin: 0 0.5rem;">(${log.occurrences}×)</span>
                                     <span class="log-message">${log.message}</span>
                                 </div>
-                                ${details ? `<div class="log-details"><div class="text-gray-400 text-sm ml-8">${details}</div></div>` : ''}
+                                ${details ? `<div class="log-details">${details.map(d => `<div class="text-gray-400 text-sm ml-8">${d}</div>`).join('')}</div>` : ''}
                             `;
                             container.insertBefore(entry, container.firstChild);
                             
                             // Store in patterns map
                             messagePatterns.set(pattern, {
-                                count: 1,
+                                count: log.occurrences,
                                 lastTimestamp: log.timestamp,
                                 element: entry,
-                                details: details ? [details] : []
+                                details: details || []
                             });
                         }
                     }

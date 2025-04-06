@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import aiohttp_cors
 import re
 from datetime import datetime
+from log_manager import LogManager
 
 # Load environment variables
 load_dotenv()
@@ -15,6 +16,9 @@ load_dotenv()
 config = {
     'printer_ip': os.getenv('PRINTER_IP', '')
 }
+
+# Initialize log manager as a global instance
+log_manager = LogManager()
 
 routes = web.RouteTableDef()
 
@@ -132,71 +136,14 @@ async def get_system_log(request):
                 if response.status == 200:
                     data = await response.json()
                     
-                    # Process log entries to remove hostname and deduplicate
-                    processed_logs = []
-                    seen_messages = set()  # Track unique non-warning messages
-                    message_groups = {}  # Track messages by their core content
-                    
-                    for log_entry in reversed(data):  # Process newest first
-                        # Extract timestamp and message parts
-                        match = re.match(r"(\w+ \d+ \d+:\d+:\d+) \S+ (.+)", log_entry)
-                        if match:
-                            timestamp, message = match.groups()
-                            
-                            # Determine message type and core content
-                            message_type = 'info'
-                            core_message = message
-                            
-                            # Handle different message types
-                            if 'WAR' in message:
-                                warning_match = re.match(r"PrinterService\[\d+\]:WAR - ([^:]+)", message)
-                                if warning_match:
-                                    message_type = 'warning'
-                                    core_message = f"WAR - {warning_match.group(1)}"
-                            elif 'Build Complete' in message:
-                                message_type = 'info'
-                                core_message = 'Build Complete'
-                            elif 'ERROR' in message.upper():
-                                message_type = 'error'
-                                core_message = message
-                            elif message.startswith('Okuda'):
-                                message_type = 'warning'
-                                # Extract core message without timestamp for Okuda messages
-                                core_message = re.sub(r'\[\d+\]:', ':', message)
-                            
-                            # Group similar messages
-                            message_key = f"{message_type}:{core_message}"
-                            if message_key not in message_groups:
-                                message_groups[message_key] = {
-                                    'message': message,
-                                    'timestamp': timestamp,
-                                    'raw': log_entry,
-                                    'type': message_type,
-                                    'occurrences': 1,
-                                    'details': [message] if 'Build Complete' in message else []
-                                }
-                            else:
-                                # Update existing message group
-                                message_groups[message_key]['timestamp'] = timestamp
-                                message_groups[message_key]['occurrences'] += 1
-                                if 'Build Complete' in message and message not in message_groups[message_key]['details']:
-                                    message_groups[message_key]['details'].append(message)
-                    
-                    # Convert grouped messages to processed logs
-                    for group_data in message_groups.values():
-                        log_entry = {
-                            'timestamp': group_data['timestamp'],
-                            'message': group_data['message'],
-                            'raw': group_data['raw'],
-                            'type': group_data['type'],
-                            'occurrences': group_data['occurrences']
-                        }
-                        if group_data['details']:
-                            log_entry['details'] = group_data['details']
-                        processed_logs.append(log_entry)
+                    # Process logs using the log manager
+                    processed_logs = await log_manager.process_logs(data)
                     
                     # Sort by timestamp, newest first
                     processed_logs.sort(key=lambda x: datetime.strptime(x['timestamp'], '%b %d %H:%M:%S'), reverse=True)
+                    
+                    # Clean up old data periodically
+                    log_manager.clear_old_data()
                     
                     return web.json_response(processed_logs[-100:])  # Return last 100 messages
                 else:
