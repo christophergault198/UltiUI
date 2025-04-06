@@ -1092,7 +1092,8 @@
 
         // Initialize temperature charts
         function initTempCharts() {
-            const chartOptions = {
+            // Base chart options
+            const baseChartOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
@@ -1109,14 +1110,12 @@
                         position: 'right',
                         beginAtZero: true,
                         suggestedMin: 0,
-                        suggestedMax: 250,  // Typical max temp for 3D printer
                         grid: {
                             color: 'rgba(0, 0, 0, 0.05)',
                             drawBorder: false,
                             borderDash: [5, 5]
                         },
                         ticks: {
-                            stepSize: 50,
                             font: {
                                 size: 10
                             },
@@ -1144,20 +1143,47 @@
                 }
             };
 
+            // Create specific options for each chart
+            const bedChartOptions = {
+                ...baseChartOptions,
+                scales: {
+                    ...baseChartOptions.scales,
+                    y: {
+                        ...baseChartOptions.scales.y,
+                        suggestedMax: 120,  // Bed temperature max
+                        ticks: {
+                            ...baseChartOptions.scales.y.ticks,
+                            stepSize: 20
+                        }
+                    }
+                }
+            };
+
+            const extruderChartOptions = {
+                ...baseChartOptions,
+                scales: {
+                    ...baseChartOptions.scales,
+                    y: {
+                        ...baseChartOptions.scales.y,
+                        suggestedMax: 250,  // Extruder temperature max
+                        ticks: {
+                            ...baseChartOptions.scales.y.ticks,
+                            stepSize: 50
+                        }
+                    }
+                }
+            };
+
             // Dark mode chart options
             const darkModeOptions = {
-                ...chartOptions,
                 scales: {
-                    ...chartOptions.scales,
                     y: {
-                        ...chartOptions.scales.y,
                         grid: {
                             color: 'rgba(255, 255, 255, 0.1)',
                             drawBorder: false,
                             borderDash: [5, 5]
                         },
                         ticks: {
-                            ...chartOptions.scales.y.ticks,
                             color: 'rgba(255, 255, 255, 0.7)'
                         }
                     }
@@ -1191,7 +1217,9 @@
                             }
                         ]
                     },
-                    options: document.documentElement.classList.contains('dark') ? darkModeOptions : chartOptions
+                    options: document.documentElement.classList.contains('dark') 
+                        ? { ...bedChartOptions, scales: { ...bedChartOptions.scales, ...darkModeOptions.scales } }
+                        : bedChartOptions
                 }
             );
 
@@ -1222,7 +1250,9 @@
                             }
                         ]
                     },
-                    options: document.documentElement.classList.contains('dark') ? darkModeOptions : chartOptions
+                    options: document.documentElement.classList.contains('dark')
+                        ? { ...extruderChartOptions, scales: { ...extruderChartOptions.scales, ...darkModeOptions.scales } }
+                        : extruderChartOptions
                 }
             );
 
@@ -1253,7 +1283,9 @@
                             }
                         ]
                     },
-                    options: document.documentElement.classList.contains('dark') ? darkModeOptions : chartOptions
+                    options: document.documentElement.classList.contains('dark')
+                        ? { ...extruderChartOptions, scales: { ...extruderChartOptions.scales, ...darkModeOptions.scales } }
+                        : extruderChartOptions
                 }
             );
         }
@@ -1730,74 +1762,82 @@
                 }
             }
 
-            // Check for INF logs and other important messages
+            // Check for WAR warnings and other important messages
             const isImportant = 
                 lowerMessage.includes('error') ||
                 log.message.includes('WAR') ||
-                //log.message.includes('INF -') ||
                 lowerMessage.includes('failed') ||
                 lowerMessage.includes('critical') ||
                 lowerMessage.includes('attention') ||
                 (lowerMessage.includes('temperature') && lowerMessage.includes('not'));
 
             if (isImportant) {
-                const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 const alertType = getAlertType(log.message);
                 
-                // For warning and info messages, always add them as new alerts
-                if (alertType === 'warning' || alertType === 'info') {
-                    activeAlerts.set(alertId, {
-                        timestamp: log.timestamp,
-                        message: log.message,
-                        type: alertType
-                    });
-                    
-                    const alertsContainer = document.getElementById('alerts-container');
-                    const alertHtml = createAlertEntry(log.timestamp, log.message, alertType, alertId);
-                    
-                    // Insert before the "no alerts" message
-                    const noAlertsMessage = document.getElementById('no-alerts-message');
-                    alertsContainer.insertBefore(alertHtml, noAlertsMessage);
-                    
-                    updateAlertCount();
+                // Special handling for WAR warnings
+                if (alertType === 'warning' && log.message.includes('WAR')) {
+                    const warningMatch = log.message.match(/WAR - ([^:]+)/);
+                    if (warningMatch) {
+                        const warningType = warningMatch[1].trim();
+                        const existingAlert = Array.from(document.querySelectorAll('.alert-entry'))
+                            .find(alert => alert.getAttribute('data-type') === `war-${warningType}`);
+                        
+                        if (existingAlert) {
+                            // Update existing warning with new count and timestamp
+                            const countElement = existingAlert.querySelector('.alert-count');
+                            const count = parseInt(countElement.textContent) + 1;
+                            countElement.textContent = count;
+                            existingAlert.querySelector('.alert-timestamp').textContent = `Last occurrence: ${log.timestamp}`;
+                            existingAlert.querySelector('.alert-message').textContent = 
+                                `Warning: ${warningType} (${count} occurrences). Last message: ${log.message}`;
+                        } else {
+                            // Create new warning alert
+                            addAlert('warning', 'Warning', 
+                                `Warning: ${warningType} (1 occurrence). Message: ${log.message}`, 
+                                `war-${warningType}`, true);
+                        }
+                    }
                 }
                 // For other types, only add if not already present
-                else if (!Array.from(activeAlerts.values()).some(alert => alert.message === log.message)) {
-                    activeAlerts.set(alertId, {
-                        timestamp: log.timestamp,
-                        message: log.message,
-                        type: alertType
-                    });
-                    
-                    const alertsContainer = document.getElementById('alerts-container');
-                    const alertHtml = createAlertEntry(log.timestamp, log.message, alertType, alertId);
-                    
-                    // Insert before the "no alerts" message
-                    const noAlertsMessage = document.getElementById('no-alerts-message');
-                    alertsContainer.insertBefore(alertHtml, noAlertsMessage);
-                    
-                    updateAlertCount();
+                else if (alertType !== 'warning') {
+                    const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    if (!Array.from(activeAlerts.values()).some(alert => alert.message === log.message)) {
+                        activeAlerts.set(alertId, {
+                            timestamp: log.timestamp,
+                            message: log.message,
+                            type: alertType
+                        });
+                        
+                        const alertsContainer = document.getElementById('alerts-container');
+                        const alertHtml = createAlertEntry(log.timestamp, log.message, alertType, alertId);
+                        
+                        // Insert before the "no alerts" message
+                        const noAlertsMessage = document.getElementById('no-alerts-message');
+                        alertsContainer.insertBefore(alertHtml, noAlertsMessage);
+                        
+                        updateAlertCount();
+                    }
                 }
             }
         }
 
-        // Helper function to create alert entry HTML
+        // Helper function to create alert entry with count
         function createAlertEntry(timestamp, message, type, alertId) {
             const alert = document.createElement('div');
-            alert.className = `alert-${type} mb-2 p-4 rounded-lg relative`;
-            alert.setAttribute('data-message', message);
-            alert.setAttribute('data-type', type);
+            alert.className = `alert-entry alert-${type}`;
             alert.setAttribute('data-alert-id', alertId);
             
+            const count = 1;
             alert.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-semibold">${type.charAt(0).toUpperCase() + type.slice(1)} Alert</h4>
-                        <p class="text-sm alert-message">${message}</p>
-                        <span class="text-xs text-gray-500 alert-timestamp">${timestamp}</span>
-                        ${type === 'stardust-connection' ? '<span class="text-xs font-medium text-gray-600 alert-count">1</span>' : ''}
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-2">
+                            <span class="alert-count">${count}</span>
+                            <span class="alert-timestamp">${timestamp}</span>
+                        </div>
+                        <p class="alert-message">${message}</p>
                     </div>
-                    <button onclick="dismissAlert('${alertId}')" class="text-lg hover:text-gray-800">&times;</button>
+                    <button onclick="dismissAlert('${alertId}')" class="alert-dismiss">&times;</button>
                 </div>
             `;
             
