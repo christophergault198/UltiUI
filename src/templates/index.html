@@ -131,40 +131,74 @@
         }
 
         /* Theme toggle button styles */
-        .theme-toggle {
+        .theme-toggle, .layout-toggle {
             position: fixed;
             top: 1rem;
-            right: 1rem;
-            z-index: 50;
             padding: 0.5rem;
             border-radius: 0.5rem;
             background-color: #f3f4f6;
             border: 1px solid #e5e7eb;
             cursor: pointer;
             transition: all 0.2s;
+            z-index: 50;
         }
 
-        .dark .theme-toggle {
+        .theme-toggle {
+            right: 1rem;
+        }
+
+        .layout-toggle {
+            right: 4rem;
+        }
+
+        .dark .theme-toggle, .dark .layout-toggle {
             background-color: #374151;
             border-color: #4b5563;
         }
 
-        .theme-toggle:hover {
+        .theme-toggle:hover, .layout-toggle:hover {
             background-color: #e5e7eb;
         }
 
-        .dark .theme-toggle:hover {
+        .dark .theme-toggle:hover, .dark .layout-toggle:hover {
             background-color: #4b5563;
         }
 
-        .theme-toggle svg {
+        .theme-toggle svg, .layout-toggle svg {
             width: 1.5rem;
             height: 1.5rem;
             color: #4b5563;
         }
 
-        .dark .theme-toggle svg {
-            color: #d1d5db;  /* Brighter icon in dark mode */
+        .dark .theme-toggle svg, .dark .layout-toggle svg {
+            color: #d1d5db;
+        }
+
+        /* Horizontal layout styles */
+        .horizontal-layout main {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            max-width: none;
+            padding: 0 2rem;
+        }
+
+        .horizontal-layout main > div {
+            margin-bottom: 1rem;
+        }
+
+        .horizontal-layout main > div:first-child {
+            grid-column: 1 / -1;
+        }
+
+        .horizontal-layout .camera-container {
+            aspect-ratio: 16/9;
+        }
+
+        @media (max-width: 1024px) {
+            .horizontal-layout main {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* Existing styles */
@@ -496,6 +530,16 @@
         </svg>
         <svg class="moon-icon hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+    </button>
+
+    <!-- Layout Toggle Button -->
+    <button id="layout-toggle" class="layout-toggle" aria-label="Toggle layout">
+        <svg class="vertical-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0v12M8 7V3m0 4v12m0-12h12M8 19h12m0 0v-4" />
+        </svg>
+        <svg class="horizontal-icon hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16m0 0v12M4 7v12m0-12h16M4 19h16m0 0v-4" />
         </svg>
     </button>
 
@@ -2731,6 +2775,34 @@
             });
 
             // ... existing DOMContentLoaded code ...
+        });
+
+        // Layout toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const layoutToggle = document.getElementById('layout-toggle');
+            const verticalIcon = layoutToggle.querySelector('.vertical-icon');
+            const horizontalIcon = layoutToggle.querySelector('.horizontal-icon');
+            
+            // Check for saved layout preference
+            const savedLayout = localStorage.getItem('layout') || 'vertical';
+            if (savedLayout === 'horizontal') {
+                document.documentElement.classList.add('horizontal-layout');
+                verticalIcon.classList.add('hidden');
+                horizontalIcon.classList.remove('hidden');
+            }
+            
+            layoutToggle.addEventListener('click', function() {
+                document.documentElement.classList.toggle('horizontal-layout');
+                verticalIcon.classList.toggle('hidden');
+                horizontalIcon.classList.toggle('hidden');
+                
+                // Save layout preference
+                const isHorizontal = document.documentElement.classList.contains('horizontal-layout');
+                localStorage.setItem('layout', isHorizontal ? 'horizontal' : 'vertical');
+                
+                // Trigger resize event to update charts
+                window.dispatchEvent(new Event('resize'));
+            });
         });
     </script>
 </body>
