@@ -2,11 +2,18 @@ to fix:
 
 DONE - change build plate temp graph to 150c instead of 250 - increase view as result               -AI FIX NEEDED
 
-fix WAR warning alerts to consolidate if same -AI FIX NEEDED
+NEED TO REVISE - fix WAR warning alerts to consolidate if same | NOTICED NEW METHOD CREATE NEW STYLE AND FORMAT WILL OBSERVE TO SEE IF NEW MESSAGES WORK AS INTENDED |
 
-fix fan speed to always use whole numbers no integers/decimals -AI FIX NEEDED
+Done Maybe - fix fan speed to always use whole numbers no integers/decimals -AI FIX NEEDED
 
-still duplicating cleanup messages -AI FIX NEEDED
+Done Maybe - still duplicating cleanup messages -AI FIX NEEDED
+
+
+need to ensure Toolhead calibration values dont display past ex. 0.00mm rn its showing E1 Z offset as 1.458885785885
+
+need to work on serverside processing more than clientside
+
+
 
 
 
