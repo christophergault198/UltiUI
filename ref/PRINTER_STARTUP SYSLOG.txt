@@ -1,0 +1,57 @@
+
+Apr 06 07:13:44 NetworkService[1871]: INF - firewall:81 - add own ipaddr 192.168.6.218
+Apr 06 07:13:43 NetworkService[1871]: INF - firewall:72 - Adding own ip[192.168.6.218] to firewall for print-cluster to connect to.
+Apr 06 07:13:43 NetworkService[1871]: INF - connmanManager:141 - Connman state changed: 'ConnmanState.READY' -> 'ConnmanState.ONLINE'
+Apr 06 07:13:43 NetworkService[1871]: INF - firewall:62 - Stopped nftables Firewall service.
+Apr 06 07:12:58 mjpg-streamer[1834]: MJPG-streamer [1834]: serving client: 192.168.105.55
+192.168.105.55
+Apr 06 07:11:56 PrintClusterServer[2822]: INF - app.services.access_control.cloud_access_control_backend:390 - Entering state ConnectionState.connected
+Apr 06 07:11:56 PrintClusterServer[2822]: INF - app.services.access_control.cloud_access_control_backend:386 - Updating cluster_id from startdust DBus to 'q-cthxPj0L4tnHs8xxUyICqRnb4zfv7HfiHex5omFhJz'
+Apr 06 07:11:53 Okuda[2298]: INFO Okuda.DBus.stardustServiceProxy StardustServiceProxy cloud account changed: user_id = yvaC-yJqzt4Sg9KU6Db30ev2ULZ7I4isN5zNfYqH-DK5
+Apr 06 07:11:53 StardustService[1960]: INF - stardust:492 - Received Digital Factory account information. user_id: yvaC-yJqzt4Sg9KU6Db30ev2ULZ7I4isN5zNfYqH-DK5, organization_id: JGDhiAMFCAEfK522Hd14STaB6OyZ4ZVFYmVyC1lxOXWm
+Apr 06 07:11:53 StardustService[1960]: INF - stardust:284 - Reconnection confirmed with ID q-cthxPj0L4tnHs8xxUyICqRnb4zfv7HfiHex5omFhJz.
+Apr 06 07:11:53 StardustService[1960]: INF - stardust:115 - Opening connection to the Gateway
+Apr 06 07:11:53 StardustService[1960]: INF - stardust:54 - WebSocket connection opened
+Apr 06 07:11:53 StardustService[1960]: INF - stardust:33 - Attempting to connect to wss://api.ultimaker.com:443/gateway/v1/socket
+Apr 06 07:11:53 StardustService[1960]: INF - stardust:179 - Stardust configuration: ID=q-cthxPj0L4tnHs8xxUyICqRnb4zfv7HfiHex5omFhJz, host_guid=147e1a2b-4ff2-4a5c-af9d-a6b0c6e1e313, capabilities: ['clear_build_plate', 'cluster_account_status', 'connect_with_cluster_id', 'connect_with_pin_code', 'group', 'identify', 'import_material', 'print_job_action', 'print_job_action_duplicate', 'print_job_action_reprint', 'print_job_action_response', 'print_job_recent_history', 'printer_action', 'printer_action_response', 'printer_faults', 'queue', 'rename', 'schedule', 'set_availability', 'status', 'update_firmware', 'webcam_snapshot', 'firewall', 'pin_code_lock', 'firmware_channel']
+Apr 06 07:11:53 PrintClusterServer[2822]: INF - app.app:194 - Completed starting up the application in the background
+Apr 06 07:11:53 PrintClusterServer[2822]: INF - PrintMonitorService:48 - Starting printer monitor service.
+Apr 06 07:11:52 PrintClusterServer[2822]: INF - app.dbus.cluster_service:218 - onAmountOfPrintersInClusterChanged(1)
+Apr 06 07:11:52 PrintClusterServer[2822]: INF - app.services.access_control.cloud_stardust_poll_thread:54 - Starting Stardust poll thread
+Apr 06 07:11:52 StardustService[1960]: INF - stardust.StardustWebsocketThread:127 - StardustWebsocketThread is opening the websocket connection
+Apr 06 07:11:52 StardustService[1960]: INF - stardust.StardustWebsocketThread:76 - StardustWebsocketThread.startConnection() Going to desired connection ON state
+Apr 06 07:11:52 StardustService[1960]: INF - stardust.StardustApplication:169 - Starting websocket connection with Ultimaker cloud
+Apr 06 07:11:52 StardustService[1960]: INF - stardust.StardustService:33 - 'startCloudConnection' command received on DBus with cluster_id 'q-cthxPj0L4tnHs8xxUyICqRnb4zfv7HfiHex5omFhJz'
+Apr 06 07:11:52 PrintClusterServer[2822]: INF - app.services.scheduler.schedule_runner:40 - starting scheduleRunner
+Apr 06 07:11:52 PrintClusterServer[2822]: INF - app.services.file_storage.stored_files_manager:133 - Starting storage cleanup
+Apr 06 07:11:52 PrintClusterServer[2822]: WAR - app.models.printer:771 - Found printer Printer (unique name = ultimakersystem-147e1a2b4ff24a5caf9da6b0c6e1e313, ip = 192.168.105.8, friendly name = Solidus, uuid = b299f576-500b-4f97-bfd6-1b56ab87ad70, reserved by = None, active_job = None, status = idle ) at IP 192.168.6.218
+Apr 06 07:11:52 PrintClusterServer[2822]: ConnectionError(MaxRetryError("HTTPConnectionPool(host='192.168.105.8', port=80): Max retries exceeded with url: /api/v1/system (Caused by NewConnectionError(': Failed to establish a new connection: [Errno 113] No route to host'))"))
+Apr 06 07:11:52 PrintClusterServer[2822]: PrinterApiNetworkException('')
+Apr 06 07:11:52 PrintClusterServer[2822]: WAR - app.models.printer:380 - Unable to contact printer Printer (unique name = ultimakersystem-147e1a2b4ff24a5caf9da6b0c6e1e313, ip = 192.168.105.8, friendly name = Solidus, uuid = b299f576-500b-4f97-bfd6-1b56ab87ad70, reserved by = None, active_job = None, status = idle ) at IP 192.168.105.8
+Apr 06 07:11:52 PrintClusterServer[2822]: WAR - app.libs.printer_api:346 - Failed to fetch system info for printer at http://192.168.105.8/api/v1
+Apr 06 07:11:51 Hermes[2814]: INF - registryFile:123 - Saving preferences to /var/lib/griffin/hermes_preferences.json
+Apr 06 07:11:51 Hermes[2814]: INF - registryFile:123 - Saving preferences to /var/lib/griffin/hermes_subscriptions.json
+Apr 06 07:11:49 Okuda[2298]: INFO Okuda.DBus.clusterServiceProxy ClusterServiceProxy ready
+Apr 06 07:11:49 Hermes[2814]: INF - root:66 - Connected to nl.ultimaker.cluster
+Apr 06 07:11:49 PrintClusterServer[2822]: INF - app.models.printer_collection:15 - Added printer[Printer (unique name = ultimakersystem-147e1a2b4ff24a5caf9da6b0c6e1e313, ip = 192.168.105.8, friendly name = Solidus, uuid = b299f576-500b-4f97-bfd6-1b56ab87ad70, reserved by = None, active_job = None, status = idle )]
+Apr 06 07:11:48 PrintClusterServer[2822]: INF - app.libs.watchdog:120 - Signaling application started
+Apr 06 07:11:48 PrintClusterServer[2822]: INF - service:77 - Publishing nl.ultimaker.cluster to the bus
+Apr 06 07:11:48 PrintClusterServer[2822]: INF - app.stats.statistics_logger:47 - Stats cluster.id: 2a48fa20-18be-43b2-933a-d3960f8b12e9
+Apr 06 07:11:48 PrintClusterServer[2822]: INF - PrintMonitorService:28 - Starting Printer Monitor Service...
+Apr 06 07:11:47 PrintClusterServer[2822]: INF - app.services.material_manager:57 - Refreshing the materials cache
+Apr 06 07:11:47 PrintClusterServer[2822]: INF - mainloop:55 - created a connection to the SystemBus
+Apr 06 07:11:47 PrintClusterServer[2822]: INF - app.services.file_storage.stored_files_manager:33 - Scanning fs for stored files
+Apr 06 07:11:47 PrintClusterServer[2822]: INF - app.settings:159 - Package Version 0.11.9
+Apr 06 07:11:47 PrintClusterServer[2822]: INF - app.settings:154 - Image Version: 9.0.2
+Apr 06 07:11:47 PrintClusterServer[2822]: INF - timerRegistry:80 - Setting up thread for registryFile: 'preferences.json'
+Apr 06 07:11:47 PrintClusterServer[2822]: INF - app.app:66 - Using configuration 'app.settings.ProdConfig'
+Apr 06 07:11:45 Hermes[2814]: INF - service:77 - Publishing nl.ultimaker.hermes to the bus
+Apr 06 07:11:45 MispApiService[2821]: INF - mainloop:55 - created a connection to the SystemBus
+Apr 06 07:11:45 Hermes[2814]: INF - mainloop:55 - created a connection to the SystemBus
+Apr 06 07:11:45 Hermes[2814]: INF - timerRegistry:80 - Setting up thread for registryFile: 'hermes_preferences.json'
+Apr 06 07:11:45 Hermes[2814]: INF - registryFile:111 - Reading preferences from /var/lib/griffin/hermes_preferences.json
+Apr 06 07:11:45 Hermes[2814]: INF - timerRegistry:80 - Setting up thread for registryFile: 'hermes_subscriptions.json'
+Apr 06 07:11:45 Hermes[2814]: INF - registryFile:111 - Reading preferences from /var/lib/griffin/hermes_subscriptions.json
+Apr 06 07:11:45 MarvinApiService[2817]: INF - __main__:39 - Connected to Marvin service nl.ultimaker.Marvin1
+Apr 06 07:11:45 Hermes[2814]: INF - Application:234 - Package Version 5.4.2
+

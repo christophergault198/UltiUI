@@ -1,0 +1,14 @@
+to fix:
+
+temp graphs travel out of view in printer status
+change build plate temp graph to 150c instead of 250 - increase view as result
+
+fix WAR warning alerts to consolidate if same
+
+fix fan speed to always use whole numbers no integers/decimals
+
+still duplicating cleanup messages
+
+
+
+
