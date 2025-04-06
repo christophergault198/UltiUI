@@ -1,0 +1,65 @@
+END CLEANUP
+
+
+Apr 05 22:57:04 (11×) mjpg-streamer[1897]: MJPG-streamer [1897]: serving client: 192.168.105.55
+192.168.105.55
+127.0.0.1
+Apr 05 22:57:01 PrinterService[1931]: INF - transportLayer:238 - home_distance = -0.00694
+Apr 05 22:57:00 PrintClusterServer[2858]: INF - app.models.print_job_collection:13 - Removed print_job[PrintJob (name=UMS3_2014-GOXEthanolRegenEngine,uuid=ad7353d3-ebdb-493d-b031-8550e8f328c7,status=finished)]
+Apr 05 22:57:00 PrintClusterServer[2858]: INF - app.services.file_storage.stored_files_manager:94 - Removing file: /var/spool/cluster/d8cf771d-332a-43d0-b676-7010069b909d/UMS3_Lid_Rev2.ufp
+Apr 05 22:57:00 PrintClusterServer[2858]: INF - app.dbus.cluster_service:211 - PrintJobStatusUpdated ad7353d3-ebdb-493d-b031-8550e8f328c7, finished
+Apr 05 22:57:00 Hermes[2857]: INF - root:92 - PrintJobStatus updated! ad7353d3-ebdb-493d-b031-8550e8f328c7, finished
+Apr 05 22:57:00 PrintClusterServer[2858]: INF - PrintMonitorService:75 - Stop monitoring print job ad7353d3-ebdb-493d-b031-8550e8f328c7
+Apr 05 22:57:00 PrinterService[1931]: INF - transportLayer:238 - home_distance = 0.02000
+Apr 05 22:56:59 PrinterService[1931]: INF - procedureController:276 - Request to start procedure 'RESET_FLOW_SENSOR'
+Apr 05 22:56:59 PrinterService[1931]: INF - transportLayer:238 - home_distance = 0.00000
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:220 - Procedure start: RESET_FLOW_SENSOR: RESET_FLOW_SENSOR
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:250 - Procedure next step: RESET_FLOW_SENSOR: RESET_FLOW_SENSOR
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:225 - Procedure finished: PRINT
+Apr 05 22:56:59 Okuda[2363]: INFO Okuda.Components.screen_saver modeChanged: Mode.Printing --> Mode.AttentionRequired
+Apr 05 22:56:59 PrinterService[1931]: INF - transportLayer:238 - home_distance = -0.03472
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - GenericProcedure(key='RESET_FLOW_SENSOR', outcome=None) transitioning from 'ResetFlowStep(key='RESET_FLOW_SENSOR')' > 'None'
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:225 - Procedure finished: RESET_FLOW_SENSOR
+Apr 05 22:56:59 Okuda[2363]: INFO Okuda.Components.screen_saver modeChanged: Mode.AttentionRequired --> Mode.Idle
+Apr 05 22:57:00 PrintClusterServer[2858]: INF - app.services.print_job.print_job_service:290 - PrintJob [PrintJob (name=UMS3_2014-GOXEthanolRegenEngine,uuid=ad7353d3-ebdb-493d-b031-8550e8f328c7,status=wait_cleanup)] status change wait_cleanup -> finished
+Apr 05 22:57:00 PrintClusterServer[2858]: INF - app.models.print_job:262 - Setting active printer of PrintJob (name=UMS3_2014-GOXEthanolRegenEngine,uuid=ad7353d3-ebdb-493d-b031-8550e8f328c7,status=finished) to None
+Apr 05 22:57:00 PrintClusterServer[2858]: INF - app.models.printer:281 - Setting active job of Printer (unique name = ultimakersystem-147e1a2b4ff24a5caf9da6b0c6e1e313, ip = 192.168.105.8, friendly name = Solidus, uuid = b299f576-500b-4f97-bfd6-1b56ab87ad70, reserved by = None, active_job = PrintJob (name=UMS3_2014-GOXEthanolRegenEngine,uuid=ad7353d3-ebdb-493d-b031-8550e8f328c7,status=finished), status = printing ) to None
+Apr 05 22:56:58 Okuda[2363]: "424163.213 qml [bootup] Main screen - Confirm removal button: clicked"
+Apr 05 22:56:58 Okuda[2363]: INFO Okuda.Components.progress Print is removed
+Apr 05 22:56:58 PrinterService[1931]: INF - printerService:186 - Message procedure: PRINT: PRINTER_CLEANED
+Apr 05 22:56:58 PrinterService[1931]: INF - procedure:396 - Message: 'PRINTER_CLEANED' for procedure 'PrintProcedure(key='PRINT', outcome=None)'
+Apr 05 22:56:58 PrinterService[1931]: INF - procedure:556 - PrintProcedure(key='PRINT', outcome=None) transitioning from 'WaitMessageStep(key='WAIT_FOR_CLEANUP')' > 'None'
+Apr 05 22:56:58 PrinterService[1931]: INF - printJobStateProperty:82 - New print job state: wait_cleanup -> none
+Apr 05 22:56:58 PrinterService[1931]: INF - procedureController:276 - Request to start procedure 'POST_DEPRIME'
+Apr 05 22:56:58 PrinterService[1931]: INF - printerStateProperty:81 - State change: printing -> idle
+Apr 05 22:56:58 AnalyticsService[2236]: INF - analyticsService:202 - Not allowed to post print job analytics.
+Apr 05 22:56:58 PrinterService[1931]: INF - printHeadController:221 - Print core cleaning is not recommended for 0 containing a AA 0.8 printcore
+Apr 05 22:56:58 PrinterService[1931]: INF - printHeadController:221 - Print core cleaning is not recommended for 1 containing a AA 0.4 printcore
+Apr 05 22:56:58 PrinterService[1931]: INF - printerService:220 - Procedure start: POST_DEPRIME: HOME_HEAD
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_DEPRIME: HOME_HEAD
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - PostDeprimeProcedure(key='POST_DEPRIME', outcome=None) transitioning from 'HomeHeadStep(key='HOME_HEAD')' > 'OtherProcedureStep(key='SWITCH_TO_HOTEND')'
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_DEPRIME: SWITCH_TO_HOTEND
+Apr 05 22:56:59 PrinterService[1931]: INF - switchActiveHotendProcedure:40 - Hotend already active, no need to switch
+Apr 05 22:56:59 PrinterService[1931]: INF - switchActiveHotendProcedure:45 - Target hotend = 1
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:220 - Procedure start: SWITCH_ACTIVE_HOTEND: WAIT
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:250 - Procedure next step: SWITCH_ACTIVE_HOTEND: WAIT
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - SwitchActiveHotendProcedure(key='SWITCH_ACTIVE_HOTEND', outcome=None) transitioning from 'WaitForQueueToBeEmptyStep(key='WAIT')' > 'None'
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - PostDeprimeProcedure(key='POST_DEPRIME', outcome=None) transitioning from 'OtherProcedureStep(key='SWITCH_TO_HOTEND')' > 'HomeBedStep(key='HOME_BED')'
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_DEPRIME: HOME_BED
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - PostDeprimeProcedure(key='POST_DEPRIME', outcome=None) transitioning from 'HomeBedStep(key='HOME_BED')' > 'HomeHeadStep(key='HOME_HEAD')'
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - PostDeprimeProcedure(key='POST_DEPRIME', outcome=None) transitioning from 'HomeHeadStep(key='HOME_HEAD')' > 'PowerDownSteppersStep(key='POWER_DOWN_STEPPERS')'
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_DEPRIME: POWER_DOWN_STEPPERS
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - PostDeprimeProcedure(key='POST_DEPRIME', outcome=None) transitioning from 'PowerDownSteppersStep(key='POWER_DOWN_STEPPERS')' > 'WaitForQueueToBeEmptyStep(key='WAITING')'
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_DEPRIME: WAITING
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:225 - Procedure finished: SWITCH_ACTIVE_HOTEND
+Apr 05 22:56:59 PrinterService[1931]: INF - procedure:556 - PostDeprimeProcedure(key='POST_DEPRIME', outcome=None) transitioning from 'WaitForQueueToBeEmptyStep(key='WAITING')' > 'None'
+Apr 05 22:56:59 PrinterService[1931]: INF - printerService:225 - Procedure finished: POST_DEPRIME
+Apr 05 22:46:16 StardustService[16284]: INF - stardust:54 - WebSocket connection opened
+Apr 05 22:46:16 StardustService[16284]: INF - stardust:115 - Opening connection to the Gateway
+Apr 05 22:46:16 StardustService[16284]: INF - stardust:284 - Reconnection confirmed with ID q-cthxPj0L4tnHs8xxUyICqRnb4zfv7HfiHex5omFhJz.
+Apr 05 22:46:16 StardustService[16284]: INF - stardust:492 - Received Digital Factory account information. user_id: yvaC-yJqzt4Sg9KU6Db30ev2ULZ7I4isN5zNfYqH-DK5, organization_id: JGDhiAMFCAEfK522Hd14STaB6OyZ4ZVFYmVyC1lxOXWm
+Apr 05 22:46:16 Okuda[2363]: INFO Okuda.DBus.stardustServiceProxy StardustServiceProxy cloud account changed: user_id = yvaC-yJqzt4Sg9KU6Db30ev2ULZ7I4isN5zNfYqH-DK5
+Apr 05 22:46:18 PrintClusterServer[2858]: INF - app.services.access_control.cloud_access_control_backend:386 - Updating cluster_id from startdust DBus to 'q-cthxPj0L4tnHs8xxUyICqRnb4zfv7HfiHex5omFhJz'
+Apr 05 22:46:18 PrintClusterServer[2858]: INF - app.services.access_control.cloud_access_control_backend:390 - Entering state ConnectionState.connected
+Apr 05 22:53:54 PrinterService[1931]: INF - waitForConditionStep:50 - Step WAIT_FOR_CLEANUP is waiting...
+

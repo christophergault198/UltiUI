@@ -1,0 +1,89 @@
+
+
+
+
+
+Apr 05 22:42:17 PrintClusterServer[2858]: INF - app.services.print_job.print_job_service:290 - PrintJob [PrintJob (name=UMS3_2014-GOXEthanolRegenEngine,uuid=ad7353d3-ebdb-493d-b031-8550e8f328c7,status=printing)] status change printing -> post_print
+Apr 05 22:42:17 PrintClusterServer[2858]: INF - app.dbus.cluster_service:211 - PrintJobStatusUpdated ad7353d3-ebdb-493d-b031-8550e8f328c7, post_print
+Apr 05 22:42:17 Hermes[2857]: INF - root:92 - PrintJobStatus updated! ad7353d3-ebdb-493d-b031-8550e8f328c7, post_print
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ReleaseMotionLockStep(key='RELEASE_MOTION_LOCK')' > 'SetPropertyStep(key='STOP_FANS')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: STOP_FANS
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'SetPropertyStep(key='STOP_FANS')' > 'OtherProcedureStep(key='DEPRIME')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: DEPRIME
+Apr 05 22:42:14 PrinterService[1931]: INF - deprimeProcedure:177 - hotend(0) is already 6.50 mm retracted.
+Apr 05 22:42:14 PrinterService[1931]: INF - deprimeProcedure:220 - retracting hotend(0) -20 mm
+Apr 05 22:42:14 PrinterService[1931]: INF - deprimeProcedure:245 - depriming hotend(0) -15 mm
+Apr 05 22:42:14 PrinterService[1931]: INF - deprimeProcedure:177 - hotend(1) is already 44.50 mm retracted.
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:220 - Procedure start: DEPRIME: SELECT_HOTEND_0
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: DEPRIME: SELECT_HOTEND_0
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - DeprimeProcedure(key='DEPRIME', outcome=None) transitioning from 'QueueRawGCodeWaitStep(key='SELECT_HOTEND_0')' > 'GotoPositionStep(key='RETRACT_0')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: DEPRIME: RETRACT_0
+Apr 05 22:42:14 PrinterService[1931]: INF - gotoPositionStep:86 - Moving to: x:None y:None z:None e:-20.0 speed:10.0, relative:True, immediate:True
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - DeprimeProcedure(key='DEPRIME', outcome=None) transitioning from 'GotoPositionStep(key='RETRACT_0')' > 'SetPropertyStep(key='START_COOLDOWN_HOTEND_0')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: DEPRIME: START_COOLDOWN_HOTEND_0
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - DeprimeProcedure(key='DEPRIME', outcome=None) transitioning from 'SetPropertyStep(key='START_COOLDOWN_HOTEND_0')' > 'WaitForMultipleHotendsTemperatureStep(key='COOLDOWN_HOTENDS_WAIT')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: DEPRIME: COOLDOWN_HOTENDS_WAIT
+Apr 05 22:42:14 (97×) NfcService[2234]: INF - nfcPrinterHotendInfo:167 - PrintCore 0 extruded 10.00 mm in 32.1 s, remaining length = 19566 mm, stat record usage duration: 52805 s
+Core 0: 10.01mm in 36.8s (18754mm remaining)
+Core 0: 10.03mm in 24.1s (18744mm remaining)
+Core 0: 10.02mm in 34.1s (18734mm remaining)
+Core 0: 10.00mm in 44.4s (18724mm remaining)
+unknown extrusion
+Apr 05 22:42:14 (97×) NfcService[2234]: INF - nfcController:112 - Queueing tag for hotend 0, tag: NfcTag(uid=b'\x04]U\xba\\\x13\x91'), record: StatRecordV0(version=0, compatibility_version=0, material_unit=2, material_total=750000, material_remaining=158518.62527640924, total_usage_duration=52805.081539518076)
+Apr 05 22:42:15 (132×) mjpg-streamer[1897]: MJPG-streamer [1897]: serving client: 192.168.105.55
+192.168.105.55
+127.0.0.1
+Apr 05 22:42:13 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'RetractToLengthFromNozzle(key='SHORT_RETRACT')' > 'WipeNozzleStep(key='WIPE_BEFORE_Z')'
+Apr 05 22:42:13 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: WIPE_BEFORE_Z
+Apr 05 22:42:13 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'WipeNozzleStep(key='WIPE_BEFORE_Z')' > 'GotoPositionStep(key='LOWER_BED')'
+Apr 05 22:42:13 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: LOWER_BED
+Apr 05 22:42:13 PrinterService[1931]: INF - gotoPositionStep:86 - Moving to: x:None y:None z:3 e:None speed:None, relative:True, immediate:False
+Apr 05 22:42:13 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'GotoPositionStep(key='LOWER_BED')' > 'WaitForQueueToBeEmptyStep(key='WAIT_FOR_QUEUE_TO_BE_EMPTY')'
+Apr 05 22:42:13 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: WAIT_FOR_QUEUE_TO_BE_EMPTY
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'WaitForQueueToBeEmptyStep(key='WAIT_FOR_QUEUE_TO_BE_EMPTY')' > 'SetFlowDetectionStep(key='DISABLE_FLOW_DETECTION')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: DISABLE_FLOW_DETECTION
+Apr 05 22:42:14 PrinterService[1931]: INF - setFlowDetectionStep:71 - Setting filament flow sensor detection to False
+Apr 05 22:42:14 PrinterService[1931]: INF - materialManager:322 - Getting material settings for: nozzle_nr[0], guid[40a273c6-0e15-4db5-a278-8eb0b4a9e293]
+Apr 05 22:42:14 PrinterService[1931]: INF - materialManager:322 - Getting material settings for: nozzle_nr[1], guid[]
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'SetFlowDetectionStep(key='DISABLE_FLOW_DETECTION')' > 'ResetPausedStep(key='RESET_PAUSED_STATE')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_PAUSED_STATE
+Apr 05 22:42:14 PrinterService[1931]: INF - controller:1036 - Setting paused state to: False
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPausedStep(key='RESET_PAUSED_STATE')' > 'ResetPropertyToDefaultStep(key='RESET_PRINT_SPEED')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_PRINT_SPEED
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_PRINT_SPEED')' > 'ResetPropertyToDefaultStep(key='RESET_MATERIAL_FLOW')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_MATERIAL_FLOW
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_MATERIAL_FLOW')' > 'ResetPropertyToDefaultStep(key='RESET_ACCELERATION_XYZ')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_ACCELERATION_XYZ
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_ACCELERATION_XYZ')' > 'ResetPropertyToDefaultStep(key='RESET_ACCELERATION_E')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_ACCELERATION_E
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_ACCELERATION_E')' > 'ResetPropertyToDefaultStep(key='RESET_JERK_XY')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_JERK_XY
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_JERK_XY')' > 'ResetPropertyToDefaultStep(key='RESET_JERK_Z')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_JERK_Z
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_JERK_Z')' > 'ResetPropertyToDefaultStep(key='RESET_JERK_E')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_JERK_E
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_JERK_E')' > 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_X')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_MAX_SPEED_X
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_X')' > 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_Y')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_MAX_SPEED_Y
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_Y')' > 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_Z')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_MAX_SPEED_Z
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_Z')' > 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_E')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_MAX_SPEED_E
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_MAX_SPEED_E')' > 'ResetPropertyToDefaultStep(key='RESET_CURRENT_XY')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_CURRENT_XY
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_CURRENT_XY')' > 'ResetPropertyToDefaultStep(key='RESET_CURRENT_Z')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_CURRENT_Z
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_CURRENT_Z')' > 'ResetPropertyToDefaultStep(key='RESET_CURRENT_E')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_CURRENT_E
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_CURRENT_E')' > 'SetPropertyStep(key='COOLDOWN_BED')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: COOLDOWN_BED
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'SetPropertyStep(key='COOLDOWN_BED')' > 'ResetPropertyToDefaultStep(key='RESET_TUNE_OFFSET_TEMPERATURE_BED')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RESET_TUNE_OFFSET_TEMPERATURE_BED
+Apr 05 22:42:14 PrinterService[1931]: INF - procedure:556 - PostPrintProcedure(key='POST_PRINT', outcome=None) transitioning from 'ResetPropertyToDefaultStep(key='RESET_TUNE_OFFSET_TEMPERATURE_BED')' > 'ReleaseMotionLockStep(key='RELEASE_MOTION_LOCK')'
+Apr 05 22:42:14 PrinterService[1931]: INF - printerService:250 - Procedure next step: POST_PRINT: RELEASE_MOTION_LOCK
+Apr 05 22:42:14 PrinterService[1931]: INF - transportLayer:234 - Case fan 24V, speed = 0
+Apr 05 22:40:59 (8×) NfcService[2234]: INF - nfcController:331 - Writing tag: NfcTag(uid=b'\x04]U\xba\\\x13\x91'), record: StatRecordV0(version=0, compatibility_version=0, material_unit=2, material_total=750000, material_remaining=158762.0319057717, total_usage_duration=52533.44344648025) for hotend index # 0
+Apr 05 22:11:11 SystemService[1854]: INF - systemUpdate:435 - Scheduling next check for updates in 60.0 minute(s)
+Apr 05 22:06:46 PrintClusterServer[2858]: WAR - app.libs.printer_api:295 - Failed to fetch status for printer at http://127.0.0.1/api/v1
+
