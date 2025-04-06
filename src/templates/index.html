@@ -1487,7 +1487,7 @@
         // Update print job information
         async function updatePrintJob() {
             try {
-                const response = await fetch('/api/print-job');
+                const response = await fetch('/api/print_job');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
