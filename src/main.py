@@ -53,6 +53,9 @@ async def get_print_job(request):
                 if response.status == 200:
                     data = await response.json()
                     return web.json_response(data)
+                elif response.status == 404:
+                    # Return a specific response for "no job" case
+                    return web.json_response({'state': None, 'message': 'No print job is currently running'})
                 else:
                     return web.json_response(
                         {'error': f'Failed to fetch print job: {response.status}'}, 

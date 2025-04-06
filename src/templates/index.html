@@ -1487,7 +1487,7 @@
         // Update print job information
         async function updatePrintJob() {
             try {
-                const response = await fetch('/api/print_job');
+                const response = await fetch('/api/print-job');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -1527,10 +1527,26 @@
                     noJobMessage.classList.remove('hidden');
                     jobStatus.textContent = 'No Job';
                     jobStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800';
+                    
+                    // Display the message from the server if available
+                    if (data.message) {
+                        document.getElementById('no-job-message').textContent = data.message;
+                    }
                 }
 
             } catch (error) {
                 console.error('Error updating print job:', error);
+                
+                // Show a user-friendly error message
+                const jobDetails = document.getElementById('job-details');
+                const noJobMessage = document.getElementById('no-job-message');
+                const jobStatus = document.getElementById('job-status');
+                
+                jobDetails.classList.add('hidden');
+                noJobMessage.classList.remove('hidden');
+                noJobMessage.textContent = 'Unable to fetch print job information. Please check your connection.';
+                jobStatus.textContent = 'Error';
+                jobStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
             }
         }
 
