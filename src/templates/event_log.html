@@ -1,27 +1,136 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltiUI - Event Log</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Dark mode styles */
+        .dark {
+            color-scheme: dark;
+        }
+        
+        .dark body {
+            background-color: #1a1a1a;
+            color: #f3f4f6;  /* Brighter base text */
+        }
 
-{% block content %}
-<div class="container mt-4">
-    <h2>Event Log</h2>
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
+        .dark .bg-white {
+            background-color: #2d2d2d;
+        }
+
+        .dark .text-gray-800 {
+            color: #f3f4f6;  /* Brighter primary text */
+        }
+
+        .dark .text-gray-700 {
+            color: #e5e7eb;  /* Brighter secondary text */
+        }
+
+        .dark .text-gray-600 {
+            color: #d1d5db;  /* Brighter tertiary text */
+        }
+
+        .dark .text-gray-500 {
+            color: #9ca3af;  /* Adjusted muted text */
+        }
+
+        .dark .text-gray-400 {
+            color: #d1d5db;  /* Brighter muted text */
+        }
+
+        .dark .border-gray-300 {
+            border-color: #4b5563;
+        }
+
+        .dark .bg-gray-100 {
+            background-color: #374151;
+        }
+
+        .dark .bg-gray-50 {
+            background-color: #374151;
+        }
+
+        .dark .bg-gray-200 {
+            background-color: #4b5563;
+        }
+
+        .dark .border {
+            border-color: #4b5563;
+        }
+
+        /* Theme toggle button styles */
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 50;
+        }
+
+        .dark .theme-toggle {
+            background-color: #374151;
+            border-color: #4b5563;
+        }
+
+        .theme-toggle:hover {
+            background-color: #e5e7eb;
+        }
+
+        .dark .theme-toggle:hover {
+            background-color: #4b5563;
+        }
+
+        .theme-toggle svg {
+            width: 1.5rem;
+            height: 1.5rem;
+            color: #4b5563;
+        }
+
+        .dark .theme-toggle svg {
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+    </button>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Event Log</h1>
+            <button onclick="window.close()" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded">
+                Close Event Log
+            </button>
+        </div>
+
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th>Time</th>
-                            <th>Type</th>
-                            <th>Message</th>
-                            <th>Parameters</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parameters</th>
                         </tr>
                     </thead>
-                    <tbody id="eventLogBody">
+                    <tbody id="eventLogBody" class="bg-white divide-y divide-gray-200">
                         {% for event in events %}
-                        <tr>
-                            <td>{{ event.formatted_time }}</td>
-                            <td>{{ event.type_id }}</td>
-                            <td>{{ event.message }}</td>
-                            <td>{{ event.parameters|join(', ') }}</td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ event.formatted_time }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ event.type_id }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">{{ event.message }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">{{ event.parameters|join(', ') }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -29,30 +138,54 @@
             </div>
         </div>
     </div>
-</div>
 
-<script>
-function refreshEventLog() {
-    fetch('/api/events')
-        .then(response => response.json())
-        .then(data => {
-            const tbody = document.getElementById('eventLogBody');
-            tbody.innerHTML = '';
-            data.forEach(event => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${event.formatted_time}</td>
-                    <td>${event.type_id}</td>
-                    <td>${event.message}</td>
-                    <td>${event.parameters.join(', ')}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        })
-        .catch(error => console.error('Error fetching events:', error));
-}
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        
+        // Check for saved theme preference or use system preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+        
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', () => {
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                html.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        });
 
-// Refresh every 30 seconds
-setInterval(refreshEventLog, 30000);
-</script>
-{% endblock %} 
+        // Refresh event log data
+        function refreshEventLog() {
+            fetch('/api/events')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('eventLogBody');
+                    tbody.innerHTML = '';
+                    data.forEach(event => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50';
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${event.formatted_time}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${event.type_id}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">${event.message}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">${event.parameters.join(', ')}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error fetching events:', error));
+        }
+
+        // Refresh every 30 seconds
+        setInterval(refreshEventLog, 30000);
+    </script>
+</body>
+</html> 
