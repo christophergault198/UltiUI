@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Print Jobs History{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Print Jobs History</h1>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <label class="input-group-text" for="job-count">Jobs</label>
+                <input type="number" class="form-control" id="job-count" min="1" max="1000" value="50">
+                <button class="btn btn-primary" id="refresh-button">Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Duration</th>
+                    <th>Size</th>
+                    <th>Layer Height</th>
+                    <th>Material</th>
+                </tr>
+            </thead>
+            <tbody id="print-jobs-table">
+                <!-- Print jobs will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function formatStatus(status) {
+    const statusClasses = {
+        'Finished': 'success',
+        'Aborted': 'danger',
+        'Cancelled': 'warning',
+        'Unknown': 'secondary'
+    };
+    
+    const className = statusClasses[status] || 'secondary';
+    return `<span class="badge bg-${className}">${status}</span>`;
+}
+
+function refreshPrintJobs() {
+    const count = document.getElementById('job-count').value;
+    fetch(`/api/print-jobs?count=${count}`)
+        .then(response => response.json())
+        .then(data => {
+            const tableBody = document.getElementById('print-jobs-table');
+            tableBody.innerHTML = '';
+            
+            data.forEach(job => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${job.name}</td>
+                    <td>${formatStatus(job.status)}</td>
+                    <td>${job.start_time}</td>
+                    <td>${job.end_time}</td>
+                    <td>${job.duration}</td>
+                    <td>${job.size}</td>
+                    <td>${job.layer_height}</td>
+                    <td>${job.material}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading print jobs:', error);
+            const tableBody = document.getElementById('print-jobs-table');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-danger">
+                        Error loading print jobs. Please try again later.
+                    </td>
+                </tr>
+            `;
+        });
+}
+
+// Initial load
+refreshPrintJobs();
+
+// Set up refresh button
+document.getElementById('refresh-button').addEventListener('click', refreshPrintJobs);
+
+// Auto-refresh every 30 seconds
+setInterval(refreshPrintJobs, 30000);
+</script>
+{% endblock %} 

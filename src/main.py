@@ -9,6 +9,7 @@ import re
 from datetime import datetime
 from log_manager import LogManager
 from event_log_service import EventLogService
+from print_jobs_service import PrintJobsService
 import numpy as np
 import aiohttp_jinja2
 import jinja2
@@ -25,6 +26,7 @@ config = {
 # Initialize log manager and event log service as global instances
 log_manager = LogManager()
 event_log_service = EventLogService()
+print_jobs_service = PrintJobsService()
 
 routes = web.RouteTableDef()
 
@@ -650,6 +652,47 @@ async def event_log_page(request):
             status=500
         )
 
+@routes.get('/api/print-jobs')
+async def get_print_jobs(request):
+    try:
+        # Get count parameter from query string if present
+        count = None
+        if 'count' in request.query:
+            try:
+                count = int(request.query['count'])
+                # Limit to reasonable values
+                if count < 1:
+                    count = 1
+                elif count > 1000:
+                    count = 1000
+            except ValueError:
+                # If count is not a valid integer, ignore it
+                pass
+                
+        print_jobs = print_jobs_service.get_formatted_print_jobs(count)
+        return web.json_response(print_jobs)
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch print jobs: {str(e)}'}, 
+            status=500
+        )
+
+@routes.get('/print-jobs')
+async def print_jobs_page(request):
+    try:
+        print_jobs = print_jobs_service.get_formatted_print_jobs(50)  # Default to 50 jobs
+        response = aiohttp_jinja2.render_template(
+            'print_jobs.html',
+            request,
+            {'print_jobs': print_jobs}
+        )
+        return response
+    except Exception as e:
+        return web.Response(
+            text=f"Error loading print jobs: {str(e)}",
+            status=500
+        )
+
 def init_app():
     """Initialize the application"""
     app = web.Application()
@@ -690,6 +733,9 @@ def init_app():
     
     # Add event log route directly without using @routes decorator
     app.router.add_get('/event-log', event_log_page)
+    
+    app.router.add_get('/api/print-jobs', get_print_jobs)
+    app.router.add_get('/print-jobs', print_jobs_page)
     
     app.router.add_static('/static', 'src/static')
     
