@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -7,7 +7,7 @@ class PrintJobsService:
         self.base_url = base_url
         self.print_jobs_endpoint = f"{base_url}/api/v1/history/print_jobs"
 
-    def get_print_jobs(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
+    async def get_print_jobs(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
         """
         Fetch print jobs history from the API endpoint
         Args:
@@ -19,10 +19,14 @@ class PrintJobsService:
             if count is not None:
                 url = f"{url}?count={count}"
                 
-            response = requests.get(url)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        print(f"Error fetching print jobs: {response.status}")
+                        return []
+        except Exception as e:
             print(f"Error fetching print jobs: {e}")
             return []
 
@@ -57,13 +61,13 @@ class PrintJobsService:
         else:
             return f"{seconds}s"
 
-    def get_formatted_print_jobs(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
+    async def get_formatted_print_jobs(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
         """
         Get print jobs with formatted timestamps and additional fields
         Args:
             count: Optional number of print jobs to retrieve
         """
-        print_jobs = self.get_print_jobs(count)
+        print_jobs = await self.get_print_jobs(count)
         formatted_jobs = []
         
         for job in print_jobs:

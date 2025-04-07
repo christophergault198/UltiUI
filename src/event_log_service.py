@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -7,7 +7,7 @@ class EventLogService:
         self.base_url = base_url
         self.events_endpoint = f"{base_url}/api/v1/history/events"
 
-    def get_events(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
+    async def get_events(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
         """
         Fetch events from the API endpoint
         Args:
@@ -19,10 +19,14 @@ class EventLogService:
             if count is not None:
                 url = f"{url}?count={count}"
                 
-            response = requests.get(url)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        print(f"Error fetching events: {response.status}")
+                        return []
+        except Exception as e:
             print(f"Error fetching events: {e}")
             return []
 
@@ -36,13 +40,13 @@ class EventLogService:
         except ValueError:
             return time_str
 
-    def get_formatted_events(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
+    async def get_formatted_events(self, count: Optional[int] = None) -> List[Dict[Any, Any]]:
         """
         Get events with formatted timestamps
         Args:
             count: Optional number of events to retrieve
         """
-        events = self.get_events(count)
+        events = await self.get_events(count)
         for event in events:
             if 'time' in event:
                 event['formatted_time'] = self.format_event_time(event['time'])

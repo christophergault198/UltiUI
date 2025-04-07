@@ -628,7 +628,7 @@ async def get_events(request):
                 # If count is not a valid integer, ignore it
                 pass
                 
-        events = event_log_service.get_formatted_events(count)
+        events = await event_log_service.get_formatted_events(count)
         return web.json_response(events)
     except Exception as e:
         return web.json_response(
@@ -639,7 +639,7 @@ async def get_events(request):
 @routes.get('/event-log')
 async def event_log_page(request):
     try:
-        events = event_log_service.get_formatted_events()
+        events = await event_log_service.get_formatted_events()
         response = aiohttp_jinja2.render_template(
             'event_log.html',
             request,
@@ -669,7 +669,7 @@ async def get_print_jobs(request):
                 # If count is not a valid integer, ignore it
                 pass
                 
-        print_jobs = print_jobs_service.get_formatted_print_jobs(count)
+        print_jobs = await print_jobs_service.get_formatted_print_jobs(count)
         return web.json_response(print_jobs)
     except Exception as e:
         return web.json_response(
@@ -680,7 +680,7 @@ async def get_print_jobs(request):
 @routes.get('/print-jobs')
 async def print_jobs_page(request):
     try:
-        print_jobs = print_jobs_service.get_formatted_print_jobs(50)  # Default to 50 jobs
+        print_jobs = await print_jobs_service.get_formatted_print_jobs(50)  # Default to 50 jobs
         response = aiohttp_jinja2.render_template(
             'print_jobs.html',
             request,
