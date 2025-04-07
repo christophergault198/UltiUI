@@ -1143,38 +1143,18 @@
             </div>
 
             <!-- 9. System Log Section -->
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-semibold text-gray-800">System Logs</h2>
-                <div class="flex space-x-2">
-                    <a href="/event-log" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md shadow-sm transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        Event Log
-                    </a>
-                    <a href="/print-jobs" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-md shadow-sm transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        Print Jobs
-                    </a>
-                    <a href="/logout" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Logout
-                    </a>
-                </div>
-            </div>
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <button type="button" class="collapsible flex items-center justify-between">
-                    <div class="flex items-center">
-                        <span id="log-status" class="ml-4 px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">Idle</span>
-                    </div>
-                </button>
-                <div class="collapsible-content">
-                    <div id="log-container" class="log-container mt-4">
-                        <!-- Log entries will be inserted here -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">System Logs</h2>
+                <div class="mt-4">
+                    <button type="button" class="collapsible flex items-center justify-between w-full">
+                        <div class="flex items-center">
+                            <span id="log-status" class="ml-4 px-3 py-1 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">Idle</span>
+                        </div>
+                    </button>
+                    <div class="collapsible-content">
+                        <div id="log-container" class="log-container mt-4">
+                            <!-- Log entries will be inserted here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3074,5 +3054,4 @@
     </script>
 </body>
 </html> 
-</rewritten_file>
 </rewritten_file>
