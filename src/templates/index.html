@@ -271,13 +271,14 @@
             color: #1e293b;
         }
         .log-container {
-            max-height: 400px;
             overflow-y: auto;
             background-color: #1a1a1a;
             border-radius: 0.5rem;
             font-family: monospace;
             font-size: 0.875rem;
             line-height: 1.5;
+            height: 100%;
+            min-height: 400px;
         }
         .log-entry {
             padding: 0.75rem 1rem;
@@ -341,11 +342,11 @@
             content: "\2212";
         }
         .collapsible-content {
-            max-height: 0;
             overflow: hidden;
             transition: max-height 0.2s ease-out;
             background-color: #1a1a1a;
             border-radius: 0 0 0.5rem 0.5rem;
+            max-height: 0;
         }
         .alert-entry {
             padding: 1rem;
@@ -783,8 +784,9 @@
         <nav class="bg-white rounded-lg shadow-md p-4 mb-8 flex justify-between items-center">
             <div class="flex items-center space-x-6">
                 <a href="/" class="text-xl font-bold text-gray-800">UltiUI</a>
-                <a href="/event-log" class="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Event Log</a>
                 <a href="/print-jobs" class="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Print Jobs</a>
+                <a href="/event-log" class="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Event Log</a>
+                
             </div>
             <div>
                 <a href="/logout" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center">
@@ -1292,12 +1294,12 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
                 <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">System Logs</h2>
                 <div class="mt-4">
-                    <button type="button" class="collapsible flex items-center justify-between w-full">
+                    <button type="button" class="collapsible active flex items-center justify-between w-full">
                         <div class="flex items-center">
                             <span id="log-status" class="ml-4 px-3 py-1 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">Idle</span>
                         </div>
                     </button>
-                    <div class="collapsible-content">
+                    <div class="collapsible-content" style="max-height: 2000px;">
                         <div id="log-container" class="log-container mt-4">
                             <!-- Log entries will be inserted here -->
                         </div>
