@@ -4,15 +4,17 @@ from typing import Dict, List, Set, Optional
 import asyncio
 from collections import deque
 from operator import itemgetter
+import hashlib
+from alerts_service import AlertsService
 
 class LogManager:
     def __init__(self):
         self.message_patterns = {}  # Track message patterns and their variations
         self.seen_messages = set()  # Track unique messages
-        self.active_alerts = {}  # Store active alerts
         self.log_buffer = deque(maxlen=1000)  # Store last 1000 processed logs
         self.lock = asyncio.Lock()  # Thread safety for log processing
         self.last_cleanup_state = None  # Track the last cleanup state
+        self.alerts_service = AlertsService()  # Initialize alerts service
         
     async def process_log_entry(self, log_entry: str) -> Optional[Dict]:
         """Process a single log entry and return structured data"""
@@ -94,6 +96,21 @@ class LogManager:
                 'occurrences': 1,
                 'raw': entry['raw']
             }
+            
+            # Process alert if it's a warning or error
+            if msg_type in ['warning', 'error']:
+                alert_id = hashlib.md5(f"{base_message}:{entry['timestamp']}".encode()).hexdigest()
+                alert_data = {
+                    'id': alert_id,
+                    'type': msg_type,
+                    'message': base_message,
+                    'details': {
+                        'timestamp': entry['timestamp'],
+                        'raw_message': entry['raw']
+                    }
+                }
+                await self.alerts_service.process_alert(alert_data)
+            
             result.append(formatted_entry)
         
         # Sort by parsed timestamp, newest first
@@ -160,7 +177,7 @@ class LogManager:
         """Get the most recent processed logs"""
         return list(self.log_buffer)[-limit:]
     
-    def clear_old_data(self):
+    async def clear_old_data(self):
         """Clear old data from tracking structures"""
         current_time = datetime.now()
         # Clear message patterns older than 1 hour
@@ -188,4 +205,7 @@ class LogManager:
             self.message_patterns = {
                 k: v for k, v in self.message_patterns.items() 
                 if k in recent_patterns
-            } 
+            }
+            
+        # Clear old alerts
+        await self.alerts_service.clear_old_alerts() 

@@ -15,6 +15,7 @@ import aiohttp_jinja2
 import jinja2
 from aiohttp_session import setup, SimpleCookieStorage, session_middleware
 from auth import login_handler, logout_handler, login_page, login_required, SECRET_KEY
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -153,7 +154,7 @@ async def get_system_log(request):
                     processed_logs.sort(key=lambda x: datetime.strptime(x['timestamp'], '%b %d %H:%M:%S'), reverse=True)
                     
                     # Clean up old data periodically
-                    log_manager.clear_old_data()
+                    await log_manager.clear_old_data()
                     
                     return web.json_response(processed_logs[-100:])  # Return last 100 messages
                 else:
@@ -695,6 +696,80 @@ async def print_jobs_page(request):
             status=500
         )
 
+@routes.get('/api/alerts')
+async def get_alerts(request):
+    """Get all active alerts"""
+    alerts = log_manager.alerts_service.get_active_alerts()
+    return web.json_response(alerts)
+
+@routes.get('/api/alerts/history')
+async def get_alert_history(request):
+    """Get alert history"""
+    limit = request.query.get('limit', '100')
+    try:
+        limit = int(limit)
+    except ValueError:
+        limit = 100
+    alerts = log_manager.alerts_service.get_alert_history(limit)
+    return web.json_response(alerts)
+
+@routes.post('/api/alerts/{alert_id}/resolve')
+async def resolve_alert(request):
+    """Resolve an alert"""
+    alert_id = request.match_info['alert_id']
+    alert = await log_manager.alerts_service.resolve_alert(alert_id)
+    if alert:
+        return web.json_response(alert)
+    return web.json_response({'error': 'Alert not found'}, status=404)
+
+@routes.get('/api/alerts/stream')
+async def alert_stream(request):
+    """Stream alert updates to clients"""
+    response = web.StreamResponse()
+    response.headers['Content-Type'] = 'text/event-stream'
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Connection'] = 'keep-alive'
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    
+    # Add CORS preflight handling
+    if request.method == 'OPTIONS':
+        return response
+        
+    await response.prepare(request)
+
+    try:
+        # Send initial data
+        alerts = log_manager.alerts_service.get_active_alerts()
+        data = json.dumps(alerts)
+        await response.write(f'event: message\ndata: {data}\n\n'.encode())
+        await response.drain()
+
+        # Keep connection alive and send updates
+        while True:
+            # Get current alerts
+            alerts = log_manager.alerts_service.get_active_alerts()
+            
+            # Send alerts as SSE
+            data = json.dumps(alerts)
+            await response.write(f'event: message\ndata: {data}\n\n'.encode())
+            await response.drain()
+            
+            # Add a heartbeat event to keep connection alive
+            await response.write(b'event: heartbeat\ndata: ping\n\n')
+            await response.drain()
+            
+            # Wait before sending next update
+            await asyncio.sleep(1)
+    except ConnectionResetError:
+        print("Client disconnected from alert stream")
+    except asyncio.CancelledError:
+        print("Alert stream cancelled")
+    except Exception as e:
+        print(f"Error in alert stream: {str(e)}")
+    finally:
+        return response
+
 # Authentication middleware
 @web.middleware
 async def auth_middleware(request, handler):
@@ -727,13 +802,14 @@ def init_app():
         loader=jinja2.FileSystemLoader('src/templates')
     )
     
-    # Setup CORS
-    cors = CorsConfig(app, defaults={
-        "*": ResourceOptions(
+    # Setup CORS with more permissive settings
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
             expose_headers="*",
             allow_headers="*",
-            allow_methods="*"
+            allow_methods=["GET", "POST", "OPTIONS"],
+            max_age=3600
         )
     })
     
@@ -757,6 +833,10 @@ def init_app():
     app.router.add_get('/api/tolerance-threshold', get_tolerance_threshold)
     app.router.add_post('/api/tolerance-threshold', update_tolerance_threshold)
     app.router.add_get('/api/events', get_events)
+    app.router.add_get('/api/alerts', get_alerts)
+    app.router.add_get('/api/alerts/history', get_alert_history)
+    app.router.add_post('/api/alerts/{alert_id}/resolve', resolve_alert)
+    app.router.add_get('/api/alerts/stream', alert_stream)
     
     # Add event log route directly without using @routes decorator
     app.router.add_get('/event-log', event_log_page)

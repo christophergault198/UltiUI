@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UltiUI - Ultimaker S3 HMI</title>
+    <title>UltiUI</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -800,7 +800,7 @@
 
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-800 mb-2">UltiUI</h1>
-            <p class="text-gray-600">Ultimaker S3 Web Interface</p>
+            <p class="text-gray-600">The Ultimate Ultimaker Interface</p>
         </header>
 
         <main class="max-w-4xl mx-auto">
@@ -1352,7 +1352,6 @@
         let printCoresInterval;
         let logInterval;
         let seenMessages = new Set();
-        let activeAlerts = new Map(); // Store active alerts with their IDs
         let flowInterval;
         const MAX_FLOW_RATE = 5000;  // Maximum expected flow rate
         const MAX_HEATER_POWER = 255;  // Maximum heater power value
@@ -1990,130 +1989,104 @@
 
         // Process log entry for alerts
         function processLogForAlerts(log) {
-            const lowerMessage = log.message.toLowerCase();
-            
-            // Check for system update messages
-            if (log.message.includes('SystemService') && log.message.includes('Scheduling next check for updates')) {
-                const updateMatch = log.message.match(/Scheduling next check for updates in (\d+\.\d+) minute/);
-                if (updateMatch) {
-                    const minutes = parseFloat(updateMatch[1]);
-                    const nextCheck = new Date(Date.now() + minutes * 60000);
-                    const timeString = nextCheck.toLocaleTimeString();
-                    
-                    // Remove any existing update check alerts
-                    removeAlertsByType('update-check');
-                    
-                    // Add new update check alert
-                    addAlert('info', 'System Updates', `Next update check scheduled for ${timeString}`, 'update-check', true);
-                }
-            }
-
-            // Check for build completion - use timestamp from log
-            if (log.message.includes('WAIT_FOR_CLEANUP')) {
-                // Convert the timestamp to a more readable format
-                const logDate = new Date(`2024 ${log.timestamp}`);
-                const timestamp = logDate.toLocaleTimeString();
-                removeAlertsByType('build-complete');
-                addAlert('info', 'Build Complete', `Build has completed and is waiting for cleanup at ${timestamp}`, 'build-complete', true);
-            }
-
-            // Check for Stardust connection issues
-            if (log.message.includes('StardustService') && log.message.includes('Connection stopped working')) {
-                const failReason = log.message.match(/fail_reason: ([^)]+)/)?.[1] || 'unknown reason';
-                const timestamp = new Date().toLocaleTimeString();
-                
-                // Get existing Stardust alert if any
-                const existingAlert = Array.from(document.querySelectorAll('.alert-entry'))
-                    .find(alert => alert.getAttribute('data-type') === 'stardust-connection');
-                
-                if (existingAlert) {
-                    // Update existing alert with new count and timestamp
-                    const countElement = existingAlert.querySelector('.alert-count');
-                    const count = parseInt(countElement.textContent) + 1;
-                    countElement.textContent = count;
-                    existingAlert.querySelector('.alert-timestamp').textContent = `Last occurrence: ${timestamp}`;
-                    existingAlert.querySelector('.alert-message').textContent = 
-                        `Stardust service connection issues (${count} occurrences). Last error: ${failReason}. Full message: ${log.message}`;
-                } else {
-                    // Create new alert
-                    addAlert('warning', 'Stardust Service', 
-                        `Stardust service connection issues (1 occurrence). Last error: ${failReason}. Full message: ${log.message}`, 
-                        'stardust-connection', true);
-                }
-            }
-
-            // Check for INF logs and other important messages
-            const isImportant = 
-                lowerMessage.includes('error') ||
-                log.message.includes('WAR') ||
-                //log.message.includes('INF -') ||
-                lowerMessage.includes('failed') ||
-                lowerMessage.includes('critical') ||
-                lowerMessage.includes('attention') ||
-                (lowerMessage.includes('temperature') && lowerMessage.includes('not'));
-
-            if (isImportant) {
-                const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                const alertType = getAlertType(log.message);
-                
-                // For warning and info messages, always add them as new alerts
-                if (alertType === 'warning' || alertType === 'info') {
-                    activeAlerts.set(alertId, {
-                        timestamp: log.timestamp,
-                        message: log.message,
-                        type: alertType
-                    });
-                    
-                    const alertsContainer = document.getElementById('alerts-container');
-                    const alertHtml = createAlertEntry(log.timestamp, log.message, alertType, alertId);
-                    
-                    // Insert before the "no alerts" message
-                    const noAlertsMessage = document.getElementById('no-alerts-message');
-                    alertsContainer.insertBefore(alertHtml, noAlertsMessage);
-                    
-                    updateAlertCount();
-                }
-                // For other types, only add if not already present
-                else if (!Array.from(activeAlerts.values()).some(alert => alert.message === log.message)) {
-                    activeAlerts.set(alertId, {
-                        timestamp: log.timestamp,
-                        message: log.message,
-                        type: alertType
-                    });
-                    
-                    const alertsContainer = document.getElementById('alerts-container');
-                    const alertHtml = createAlertEntry(log.timestamp, log.message, alertType, alertId);
-                    
-                    // Insert before the "no alerts" message
-                    const noAlertsMessage = document.getElementById('no-alerts-message');
-                    alertsContainer.insertBefore(alertHtml, noAlertsMessage);
-                    
-                    updateAlertCount();
-                }
-            }
+            // Remove this function as alerts are now handled server-side
         }
 
         // Helper function to create alert entry HTML
         function createAlertEntry(timestamp, message, type, alertId) {
+            // Remove this function as it's replaced by addAlertFromServer
+        }
+
+        // Add alert type parameter to addAlert function
+        function addAlert(type, title, message, alertType = 'general', isDismissible = true) {
+            // Only add local alerts if they don't already exist
+            const existingAlert = document.querySelector(`[data-type="${alertType}"]`);
+            if (existingAlert) {
+                return; // Don't create duplicate local alerts
+            }
+
+            const alertsContainer = document.getElementById('alerts-container');
+            const noAlertsMessage = document.getElementById('no-alerts-message');
+            const alertId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Only create UI-specific alerts that don't come from the server
             const alert = document.createElement('div');
             alert.className = `alert-${type} mb-2 p-4 rounded-lg relative`;
-            alert.setAttribute('data-message', message);
-            alert.setAttribute('data-type', type);
             alert.setAttribute('data-alert-id', alertId);
+            alert.setAttribute('data-type', alertType);
             
             alert.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <h4 class="font-semibold">${type.charAt(0).toUpperCase() + type.slice(1)} Alert</h4>
-                        <p class="text-sm alert-message">${message}</p>
-                        <span class="text-xs text-gray-500 alert-timestamp">${timestamp}</span>
-                        ${type === 'stardust-connection' ? '<span class="text-xs font-medium text-gray-600 alert-count">1</span>' : ''}
+                        <h4 class="font-semibold">${title}</h4>
+                        <p class="text-sm">${message}</p>
                     </div>
-                    <button onclick="dismissAlert('${alertId}')" class="text-lg hover:text-gray-800">&times;</button>
+                    ${isDismissible ? `<button onclick="dismissAlert('${alertId}')" class="text-lg hover:text-gray-800">&times;</button>` : ''}
                 </div>
             `;
             
-            return alert;
+            // Insert before the "no alerts" message
+            alertsContainer.insertBefore(alert, noAlertsMessage);
+            updateAlertCount();
+        }
+
+        // Add function to remove alerts by type
+        function removeAlertsByType(alertType) {
+            const alertsContainer = document.getElementById('alerts-container');
+            const alerts = alertsContainer.querySelectorAll(`[data-type="${alertType}"]`);
+            alerts.forEach(alert => alert.remove());
+            updateAlertCount();
+        }
+
+        // Update alerts from server data
+        function updateAlertsFromServer(alerts) {
+            const alertsContainer = document.getElementById('alerts-container');
+            const noAlertsMessage = document.getElementById('no-alerts-message');
+            const currentAlertIds = new Set(alerts.map(alert => alert.id));
+            
+            // Remove alerts that are no longer active
+            Array.from(alertsContainer.children).forEach(alertElement => {
+                const alertId = alertElement.dataset.alertId;
+                if (alertId) {
+                    // Keep local alerts (starting with 'local-') unless they're system connection alerts
+                    const isLocalAlert = alertId.startsWith('local-');
+                    const isSystemConnection = alertElement.dataset.type === 'system-connection';
+                    
+                    if (!isLocalAlert || isSystemConnection) {
+                        if (!currentAlertIds.has(alertId)) {
+                            alertElement.remove();
+                            activeAlerts.delete(alertId);
+                        }
+                    }
+                }
+            });
+            
+            // Add or update alerts
+            alerts.forEach(alert => {
+                // Skip resolved alerts
+                if (alert.resolved_at) {
+                    const existingElement = document.querySelector(`[data-alert-id="${alert.id}"]`);
+                    if (existingElement) {
+                        existingElement.remove();
+                        activeAlerts.delete(alert.id);
+                    }
+                    return;
+                }
+
+                const existingElement = document.querySelector(`[data-alert-id="${alert.id}"]`);
+                if (!existingElement) {
+                    addAlertFromServer(alert);
+                } else {
+                    // Update existing alert if needed
+                    const messageElement = existingElement.querySelector('p');
+                    if (messageElement && messageElement.textContent !== alert.details.raw_message) {
+                        messageElement.textContent = alert.details.raw_message || '';
+                    }
+                }
+            });
+            
+            // Update alert count and visibility
+            updateAlertCount();
         }
 
         // Add message pattern tracking
@@ -2898,42 +2871,40 @@
 
         // Add alert type parameter to addAlert function
         function addAlert(type, title, message, alertType = 'general', isDismissible = true) {
+            // Only add local alerts if they don't already exist
+            const existingAlert = document.querySelector(`[data-type="${alertType}"]`);
+            if (existingAlert) {
+                // Update existing alert instead of creating a new one
+                const messageElement = existingAlert.querySelector('p');
+                if (messageElement) {
+                    messageElement.textContent = message;
+                }
+                return;
+            }
+
             const alertsContainer = document.getElementById('alerts-container');
             const noAlertsMessage = document.getElementById('no-alerts-message');
-            const alertId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const alertId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
-            // For material alerts, only check the alert type
-            const isMaterialAlert = alertType.startsWith('material-');
-            const existingAlert = Array.from(alertsContainer.children).find(
-                alert => isMaterialAlert ? 
-                    alert.getAttribute('data-type') === alertType :
-                    alert.getAttribute('data-message') === message && alert.getAttribute('data-type') === alertType
-            );
+            // Create alert element
+            const alert = document.createElement('div');
+            alert.className = `alert-${type} mb-2 p-4 rounded-lg relative`;
+            alert.setAttribute('data-alert-id', alertId);
+            alert.setAttribute('data-type', alertType);
             
-            if (!existingAlert) {
-                const alert = document.createElement('div');
-                alert.className = `alert-${type} mb-2 p-4 rounded-lg relative`;
-                alert.setAttribute('data-message', message);
-                alert.setAttribute('data-type', alertType);
-                alert.setAttribute('data-alert-id', alertId);
-                
-                alert.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-semibold">${title}</h4>
-                            <p class="text-sm">${message}</p>
-                        </div>
-                        ${isDismissible ? `<button onclick="dismissAlert('${alertId}')" class="text-lg hover:text-gray-800">&times;</button>` : ''}
+            alert.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-semibold">${title}</h4>
+                        <p class="text-sm">${message}</p>
                     </div>
-                `;
-                
-                // Insert before the "no alerts" message
-                alertsContainer.insertBefore(alert, noAlertsMessage);
-                updateAlertCount();
-            } else if (isMaterialAlert) {
-                // Update the existing material alert with new message
-                existingAlert.querySelector('p').textContent = message;
-            }
+                    ${isDismissible ? `<button onclick="dismissAlert('${alertId}')" class="text-lg hover:text-gray-800">&times;</button>` : ''}
+                </div>
+            `;
+            
+            // Insert before the "no alerts" message
+            alertsContainer.insertBefore(alert, noAlertsMessage);
+            updateAlertCount();
         }
 
         // Add function to remove alerts by type
@@ -3207,6 +3178,225 @@
 
         document.getElementById('close-alerts').addEventListener('click', function() {
             document.getElementById('alerts-side-menu').classList.remove('open');
+        });
+
+        // Alerts state
+        let activeAlerts = new Map(); // Store active alerts with their IDs
+        let alertEventSource = null; // Store SSE connection
+
+        // Initialize SSE connection for alerts
+        function initAlertStream() {
+            if (alertEventSource) {
+                alertEventSource.close();
+                alertEventSource = null;
+            }
+
+            try {
+                alertEventSource = new EventSource('/api/alerts/stream', { withCredentials: false });
+                console.log('Connecting to alert stream...');
+                
+                alertEventSource.addEventListener('open', function() {
+                    console.log('Alert stream connected');
+                    addAlert('info', 'System', 'Alert system connected', 'system-connection');
+                });
+                
+                alertEventSource.addEventListener('message', function(event) {
+                    try {
+                        const alerts = JSON.parse(event.data);
+                        updateAlertsFromServer(alerts);
+                    } catch (error) {
+                        console.error('Error processing alert data:', error);
+                    }
+                });
+
+                alertEventSource.addEventListener('heartbeat', function(event) {
+                    console.log('Received heartbeat from server');
+                });
+
+                alertEventSource.addEventListener('error', function(error) {
+                    console.error('Alert stream error:', error);
+                    addAlert('warning', 'System', 'Alert system connection lost - attempting to reconnect...', 'system-connection');
+                    
+                    // Close the current connection
+                    if (alertEventSource) {
+                        alertEventSource.close();
+                        alertEventSource = null;
+                    }
+                    
+                    // Try to reconnect after a delay
+                    setTimeout(() => {
+                        if (!alertEventSource) {
+                            console.log('Attempting to reconnect to alert stream...');
+                            initAlertStream();
+                        }
+                    }, 5000);
+                });
+            } catch (error) {
+                console.error('Error initializing alert stream:', error);
+                // Try to reconnect after a delay
+                setTimeout(initAlertStream, 5000);
+            }
+        }
+
+        // Update alerts from server data
+        function updateAlertsFromServer(alerts) {
+            const alertsContainer = document.getElementById('alerts-container');
+            const noAlertsMessage = document.getElementById('no-alerts-message');
+            const currentAlertIds = new Set(alerts.map(alert => alert.id));
+            
+            // Remove alerts that are no longer active
+            Array.from(alertsContainer.children).forEach(alertElement => {
+                const alertId = alertElement.dataset.alertId;
+                if (alertId) {
+                    // Keep local alerts (starting with 'local-') unless they're system connection alerts
+                    const isLocalAlert = alertId.startsWith('local-');
+                    const isSystemConnection = alertElement.dataset.type === 'system-connection';
+                    
+                    if (!isLocalAlert || isSystemConnection) {
+                        if (!currentAlertIds.has(alertId)) {
+                            alertElement.remove();
+                            activeAlerts.delete(alertId);
+                        }
+                    }
+                }
+            });
+            
+            // Add or update alerts
+            alerts.forEach(alert => {
+                // Skip resolved alerts
+                if (alert.resolved_at) {
+                    const existingElement = document.querySelector(`[data-alert-id="${alert.id}"]`);
+                    if (existingElement) {
+                        existingElement.remove();
+                        activeAlerts.delete(alert.id);
+                    }
+                    return;
+                }
+
+                const existingElement = document.querySelector(`[data-alert-id="${alert.id}"]`);
+                if (!existingElement) {
+                    addAlertFromServer(alert);
+                } else {
+                    // Update existing alert if needed
+                    const messageElement = existingElement.querySelector('p');
+                    if (messageElement && messageElement.textContent !== alert.details.raw_message) {
+                        messageElement.textContent = alert.details.raw_message || '';
+                    }
+                }
+            });
+            
+            // Update alert count and visibility
+            updateAlertCount();
+        }
+
+        // Add alert from server data
+        function addAlertFromServer(alert) {
+            const alertsContainer = document.getElementById('alerts-container');
+            const noAlertsMessage = document.getElementById('no-alerts-message');
+            
+            // Skip if alert is already resolved
+            if (alert.resolved_at) {
+                return;
+            }
+            
+            // Create alert element
+            const alertElement = document.createElement('div');
+            alertElement.className = `alert-entry alert-${alert.type}`;
+            alertElement.dataset.alertId = alert.id;
+            alertElement.dataset.type = alert.type;
+            
+            // Format timestamps
+            const createdTime = new Date(alert.created_at).toLocaleTimeString();
+            const updatedTime = new Date(alert.updated_at).toLocaleTimeString();
+            const occurrences = alert.occurrence_count > 1 ? ` (${alert.occurrence_count}×)` : '';
+            const timeDisplay = createdTime === updatedTime ? 
+                `Created: ${createdTime}${occurrences}` : 
+                `Created: ${createdTime} (Updated: ${updatedTime})${occurrences}`;
+            
+            // Create alert content
+            alertElement.innerHTML = `
+                <h4>${alert.message}</h4>
+                <p>${alert.details.raw_message || ''}</p>
+                <span class="alert-timestamp">${timeDisplay}</span>
+                <button onclick="resolveAlert('${alert.id}')" class="alert-dismiss">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            
+            // Add to container
+            alertsContainer.appendChild(alertElement);
+            noAlertsMessage.style.display = 'none';
+            
+            // Store in active alerts map
+            activeAlerts.set(alert.id, alert);
+        }
+
+        // Resolve alert
+        async function resolveAlert(alertId) {
+            try {
+                const response = await fetch(`/api/alerts/${alertId}/resolve`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to resolve alert');
+                }
+                
+                // Get the resolved alert data
+                const resolvedAlert = await response.json();
+                
+                // Remove the alert from UI immediately
+                const alertElement = document.querySelector(`[data-alert-id="${alertId}"]`);
+                if (alertElement) {
+                    alertElement.remove();
+                    activeAlerts.delete(alertId);
+                    updateAlertCount();
+                }
+            } catch (error) {
+                console.error('Error resolving alert:', error);
+                // Show error message to user
+                addAlert('error', 'System', 'Failed to resolve alert', 'system-error');
+            }
+        }
+
+        // Update alerts count badge
+        function updateAlertCount() {
+            const alertsContainer = document.getElementById('alerts-container');
+            const noAlertsMessage = document.getElementById('no-alerts-message');
+            const countBadge = document.getElementById('alerts-count');
+            
+            // Count actual alerts (excluding the "no alerts" message)
+            const alerts = alertsContainer.querySelectorAll('.alert-error, .alert-warning, .alert-info');
+            const count = alerts.length;
+            
+            // Update badge
+            countBadge.textContent = count;
+            countBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+            
+            // Show/hide no alerts message
+            if (count === 0) {
+                noAlertsMessage.style.display = 'block';
+            } else {
+                noAlertsMessage.style.display = 'none';
+            }
+        }
+
+        // Initialize SSE connection when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... existing initialization code ...
+            
+            // Initialize alert stream
+            initAlertStream();
+        });
+
+        // Clean up SSE connection when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (alertEventSource) {
+                alertEventSource.close();
+                alertEventSource = null;
+            }
         });
     </script>
 </body>
