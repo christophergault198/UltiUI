@@ -13,6 +13,8 @@ from print_jobs_service import PrintJobsService
 import numpy as np
 import aiohttp_jinja2
 import jinja2
+from aiohttp_session import setup, SimpleCookieStorage, session_middleware
+from auth import login_handler, logout_handler, login_page, login_required, SECRET_KEY
 
 # Load environment variables
 load_dotenv()
@@ -693,9 +695,31 @@ async def print_jobs_page(request):
             status=500
         )
 
+# Authentication middleware
+@web.middleware
+async def auth_middleware(request, handler):
+    # Skip authentication for login-related routes and static files
+    if request.path in ['/login', '/logout'] or request.path.startswith('/static/'):
+        return await handler(request)
+    
+    # Check if the user is authenticated
+    auth_result = await login_required(request)
+    if auth_result:
+        return auth_result
+    
+    # User is authenticated, proceed with the request
+    return await handler(request)
+
 def init_app():
     """Initialize the application"""
-    app = web.Application()
+    # Create the application with both middlewares
+    app = web.Application(middlewares=[
+        session_middleware(SimpleCookieStorage()),
+        auth_middleware
+    ])
+    
+    # Set the secret key for the session
+    app['session_secret_key'] = SECRET_KEY.encode('utf-8')
     
     # Setup template engine
     aiohttp_jinja2.setup(
@@ -715,6 +739,9 @@ def init_app():
     
     # Configure routes
     app.router.add_get('/', index)
+    app.router.add_get('/login', login_page)
+    app.router.add_post('/login', login_handler)
+    app.router.add_get('/logout', logout_handler)
     app.router.add_get('/api/config', get_config)
     app.router.add_post('/api/config', update_config)
     app.router.add_get('/api/test-connection', test_connection)

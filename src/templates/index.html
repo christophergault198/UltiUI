@@ -644,6 +644,23 @@
     </button>
 
     <div class="container mx-auto px-4 py-8">
+        <!-- Navigation Bar -->
+        <nav class="bg-white rounded-lg shadow-md p-4 mb-8 flex justify-between items-center">
+            <div class="flex items-center space-x-6">
+                <a href="/" class="text-xl font-bold text-gray-800">UltiUI</a>
+                <a href="/event-log" class="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Event Log</a>
+                <a href="/print-jobs" class="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Print Jobs</a>
+            </div>
+            <div>
+                <a href="/logout" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Logout
+                </a>
+            </div>
+        </nav>
+
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-800 mb-2">UltiUI</h1>
             <p class="text-gray-600">Ultimaker S3 Web Interface</p>
@@ -1140,6 +1157,12 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                         </svg>
                         Print Jobs
+                    </a>
+                    <a href="/logout" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Logout
                     </a>
                 </div>
             </div>
@@ -3051,4 +3074,5 @@
     </script>
 </body>
 </html> 
+</rewritten_file>
 </rewritten_file>
