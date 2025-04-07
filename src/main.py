@@ -612,7 +612,21 @@ async def index(request):
 @routes.get('/api/events')
 async def get_events(request):
     try:
-        events = event_log_service.get_formatted_events()
+        # Get count parameter from query string if present
+        count = None
+        if 'count' in request.query:
+            try:
+                count = int(request.query['count'])
+                # Limit to reasonable values
+                if count < 1:
+                    count = 1
+                elif count > 1000:
+                    count = 1000
+            except ValueError:
+                # If count is not a valid integer, ignore it
+                pass
+                
+        events = event_log_service.get_formatted_events(count)
         return web.json_response(events)
     except Exception as e:
         return web.json_response(
@@ -687,5 +701,5 @@ def init_app():
 
 if __name__ == '__main__':
     app = init_app()
-    print("Starting UltiUI server on http://localhost:8080")
+    print("Starting UltiUI server on http://localhost:8081")
     web.run_app(app, host='0.0.0.0', port=8081) 
