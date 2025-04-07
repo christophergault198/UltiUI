@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 from typing import Dict, List, Set, Optional
 import asyncio
@@ -81,12 +81,67 @@ class LogManager:
             # Get the base message without variable parts
             base_message = self.get_base_message(entry['raw'])
             
-            # Determine message type
+            # Determine message type and create alert data
             msg_type = 'info'
+            alert_data = None
+            
             if 'WAR' in base_message:
                 msg_type = 'warning'
             elif 'ERR' in base_message:
                 msg_type = 'error'
+            
+            # Check for special alerts
+            if 'WAIT_FOR_CLEANUP' in base_message:
+                # Build completion alert
+                alert_data = {
+                    'type': 'info',
+                    'message': 'Build Complete',
+                    'details': {
+                        'raw_message': f"Build has completed and is waiting for cleanup at {entry['timestamp']}",
+                        'timestamp': entry['timestamp']
+                    }
+                }
+            elif 'SystemService' in base_message and 'Scheduling next check for updates' in base_message:
+                # System update check alert
+                update_match = re.search(r'Scheduling next check for updates in (\d+\.\d+) minute', base_message)
+                if update_match:
+                    minutes = float(update_match.group(1))
+                    next_check = datetime.now() + timedelta(minutes=minutes)
+                    time_string = next_check.strftime('%H:%M:%S')
+                    alert_data = {
+                        'type': 'info',
+                        'message': 'System Updates',
+                        'details': {
+                            'raw_message': f"Next update check scheduled for {time_string}",
+                            'timestamp': entry['timestamp']
+                        }
+                    }
+            elif 'StardustService' in base_message and 'Connection stopped working' in base_message:
+                # Stardust connection alert
+                fail_match = re.search(r'fail_reason: ([^)]+)', base_message)
+                fail_reason = fail_match.group(1) if fail_match else 'unknown reason'
+                alert_data = {
+                    'type': 'warning',
+                    'message': 'Stardust Service',
+                    'details': {
+                        'raw_message': f"Stardust service connection issues. Error: {fail_reason}",
+                        'timestamp': entry['timestamp']
+                    }
+                }
+            elif msg_type in ['warning', 'error']:
+                # Regular warning/error alert
+                alert_data = {
+                    'type': msg_type,
+                    'message': base_message.split(' - ', 1)[0] if ' - ' in base_message else base_message,
+                    'details': {
+                        'raw_message': base_message,
+                        'timestamp': entry['timestamp']
+                    }
+                }
+            
+            # Process alert if we have alert data
+            if alert_data:
+                await self.alerts_service.process_alert(alert_data)
             
             # Format the entry
             formatted_entry = {
@@ -96,21 +151,6 @@ class LogManager:
                 'occurrences': 1,
                 'raw': entry['raw']
             }
-            
-            # Process alert if it's a warning or error
-            if msg_type in ['warning', 'error']:
-                alert_id = hashlib.md5(f"{base_message}:{entry['timestamp']}".encode()).hexdigest()
-                alert_data = {
-                    'id': alert_id,
-                    'type': msg_type,
-                    'message': base_message,
-                    'details': {
-                        'timestamp': entry['timestamp'],
-                        'raw_message': entry['raw']
-                    }
-                }
-                await self.alerts_service.process_alert(alert_data)
-            
             result.append(formatted_entry)
         
         # Sort by parsed timestamp, newest first

@@ -14,6 +14,18 @@ class AlertsService:
         
     def _normalize_message(self, message: str) -> str:
         """Normalize a message by removing variable parts like timestamps and IDs"""
+        # Special handling for build completion alerts
+        if "Build has completed and is waiting for cleanup" in message:
+            return "Build has completed and is waiting for cleanup"
+        
+        # Special handling for system update alerts
+        if "Next update check scheduled for" in message:
+            return "Next update check scheduled"
+        
+        # Special handling for Stardust connection issues
+        if "Stardust service connection issues" in message:
+            return "Stardust service connection issues"
+        
         # Remove timestamps
         message = re.sub(r'\b\d{2}:\d{2}:\d{2}\b', 'TIME', message)
         # Remove specific dates
