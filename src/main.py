@@ -8,7 +8,10 @@ import aiohttp_cors
 import re
 from datetime import datetime
 from log_manager import LogManager
+from event_log_service import EventLogService
 import numpy as np
+import aiohttp_jinja2
+import jinja2
 
 # Load environment variables
 load_dotenv()
@@ -19,8 +22,9 @@ config = {
     'tolerance_threshold': 1.0  # Default tolerance threshold in mm
 }
 
-# Initialize log manager as a global instance
+# Initialize log manager and event log service as global instances
 log_manager = LogManager()
+event_log_service = EventLogService()
 
 routes = web.RouteTableDef()
 
@@ -605,9 +609,42 @@ async def index(request):
     """Serve the main page"""
     return web.FileResponse('src/templates/index.html')
 
+@routes.get('/api/events')
+async def get_events(request):
+    try:
+        events = event_log_service.get_formatted_events()
+        return web.json_response(events)
+    except Exception as e:
+        return web.json_response(
+            {'error': f'Failed to fetch events: {str(e)}'}, 
+            status=500
+        )
+
+@routes.get('/event-log')
+async def event_log_page(request):
+    try:
+        events = event_log_service.get_formatted_events()
+        response = aiohttp_jinja2.render_template(
+            'event_log.html',
+            request,
+            {'events': events}
+        )
+        return response
+    except Exception as e:
+        return web.Response(
+            text=f"Error loading event log: {str(e)}",
+            status=500
+        )
+
 def init_app():
     """Initialize the application"""
     app = web.Application()
+    
+    # Setup template engine
+    aiohttp_jinja2.setup(
+        app,
+        loader=jinja2.FileSystemLoader('src/templates')
+    )
     
     # Setup CORS
     cors = CorsConfig(app, defaults={
@@ -635,6 +672,11 @@ def init_app():
     app.router.add_get('/api/probing-report', get_probing_report)
     app.router.add_get('/api/tolerance-threshold', get_tolerance_threshold)
     app.router.add_post('/api/tolerance-threshold', update_tolerance_threshold)
+    app.router.add_get('/api/events', get_events)
+    
+    # Add event log route directly without using @routes decorator
+    app.router.add_get('/event-log', event_log_page)
+    
     app.router.add_static('/static', 'src/static')
     
     # Configure CORS for all routes
@@ -646,4 +688,4 @@ def init_app():
 if __name__ == '__main__':
     app = init_app()
     print("Starting UltiUI server on http://localhost:8080")
-    web.run_app(app, host='0.0.0.0', port=8080) 
+    web.run_app(app, host='0.0.0.0', port=8081) 

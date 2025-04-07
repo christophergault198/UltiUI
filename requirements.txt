@@ -6,4 +6,7 @@ aiodns==3.1.1
 numpy>=1.24.0
 matplotlib>=3.7.0
 PySide6>=6.5.0
-PyQt6>=6.5.0  # Alternative to PySide6 if needed 
+PyQt6>=6.5.0  # Alternative to PySide6 if needed
+requests>=2.31.0  # For event log service
+aiohttp-jinja2>=1.5.0  # For template rendering
+jinja2>=3.1.0  # Required for aiohttp-jinja2 
