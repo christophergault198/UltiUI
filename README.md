@@ -33,7 +33,7 @@ python src/main.py
 
 4. Open your web browser and navigate to:
 ```
-http://localhost:8080
+http://localhost:8081
 ```
 
 ## Configuration
