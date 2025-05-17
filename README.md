@@ -6,7 +6,7 @@ A web-based Human Machine Interface (HMI) for Ultimaker S3 printers.
 
 To allow this application to function correctly, please enable Developer Mode on your printer. This grants access to the API interface the application uses to communicate.
 
-**(Please Note):** Activating Developer Mode enables remote access to your system and might have security implications. It's best to enable it only when needed for specific applications.
+**(Please Note):** Activating Developer Mode enables LAN access to your system and might have security implications. It's best to enable it only when needed for specific applications.
 
 You can find the Developer Mode option within your printer's settings under: Advanced Settings.
 
