@@ -552,9 +552,24 @@ async def update_config(request):
         data = await request.json()
         if 'printer_ip' in data:
             config['printer_ip'] = data['printer_ip']
-            # Update .env file
-            with open('.env', 'w') as f:
-                f.write(f"PRINTER_IP={config['printer_ip']}\n")
+            # Read existing .env lines
+            env_path = '.env'
+            lines = []
+            if os.path.exists(env_path):
+                with open(env_path, 'r') as f:
+                    lines = f.readlines()
+            # Update or add PRINTER_IP
+            found = False
+            for i, line in enumerate(lines):
+                if line.strip().startswith('PRINTER_IP='):
+                    lines[i] = f"PRINTER_IP={config['printer_ip']}\n"
+                    found = True
+                    break
+            if not found:
+                lines.append(f"PRINTER_IP={config['printer_ip']}\n")
+            # Write back all lines
+            with open(env_path, 'w') as f:
+                f.writelines(lines)
             return web.json_response({'status': 'success'})
         return web.json_response({'status': 'error', 'message': 'Invalid configuration'}, status=400)
     except Exception as e:
@@ -855,4 +870,4 @@ def init_app():
 if __name__ == '__main__':
     app = init_app()
     print("Starting UltiUI server on http://localhost:8081")
-    web.run_app(app, host='0.0.0.0', port=8081) 
+    web.run_app(app, host='0.0.0.0', port=8081)
