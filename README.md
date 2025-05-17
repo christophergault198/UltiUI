@@ -10,9 +10,8 @@ To allow this application to function correctly, please enable Developer Mode on
 
 You can find the Developer Mode option within your printer's settings under: Advanced Settings.
 
-https://github.com/user-attachments/assets/75450c58-1b0a-4e92-afc2-a5142318a020
-
 ## Setup
+https://github.com/user-attachments/assets/75450c58-1b0a-4e92-afc2-a5142318a020
 
 1. Create a virtual environment:
 ```bash
