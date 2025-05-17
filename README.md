@@ -2,6 +2,7 @@
 
 A web-based Human Machine Interface (HMI) for Ultimaker S3 printers.
 
+Get help - https://discord.gg/Ygm6esXa
 ## Enabling Developer Mode for This Application
 
 To allow this application to function correctly, please enable Developer Mode on your printer. This grants access to the API interface the application uses to communicate.
