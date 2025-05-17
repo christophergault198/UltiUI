@@ -2,12 +2,7 @@
 
 A web-based Human Machine Interface (HMI) for Ultimaker S3 printers.
 
-## Features (Planned)
-- Printer IP address configuration
-- Camera feed streaming
-- Printer state and information display
-- Build job statistics
-- Authentication system for advanced features
+https://github.com/user-attachments/assets/75450c58-1b0a-4e92-afc2-a5142318a020
 
 ## Setup
 
@@ -36,3 +31,5 @@ http://localhost:8080
 
 ## Configuration
 The printer IP address can be configured through the web interface. The configuration is stored in a `.env` file. 
+
+
