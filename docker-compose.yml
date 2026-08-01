@@ -1,0 +1,11 @@
+services:
+  ultiui:
+    build: .
+    container_name: ultiui
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    restart: unless-stopped

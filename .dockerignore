@@ -1,0 +1,12 @@
+venv/
+env/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+README.md
+"UltiUI Todo.txt"
+.env
+data/
+ref/*.json
+ref/*.txt

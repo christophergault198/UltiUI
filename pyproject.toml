@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ultiui"
+version = "1.0.0"
+description = "Web-based Human Machine Interface for Ultimaker S3 printers"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.9.3",
+    "aiohttp-cors>=0.7.0",
+    "python-dotenv>=1.0.1",
+    "aiohttp-jinja2>=1.5.0",
+    "jinja2>=3.1.0",
+    "aiohttp-session>=2.12.0",
+    "requests>=2.31.0",
+    "numpy>=1.24.0",
+    "cryptography>=41.0.0",
+]
+
+[project.optional-dependencies]
+ref = [
+    "PySide6>=6.5.0",
+    "PyQt6>=6.5.0",
+    "matplotlib>=3.7.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = ["ref/"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+exclude = ["ref/"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

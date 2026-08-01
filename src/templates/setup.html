@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltiUI - Setup</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-lg w-full mx-4">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">UltiUI</h1>
+                <p class="text-gray-500 mt-1">Printer Setup Wizard</p>
+            </div>
+
+            <!-- Step indicators -->
+            <div class="flex items-center justify-center mb-8 space-x-2">
+                <div class="step-dot w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium" data-step="1">1</div>
+                <div class="step-line w-12 h-0.5 bg-gray-300"></div>
+                <div class="step-dot w-8 h-8 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-medium" data-step="2">2</div>
+                <div class="step-line w-12 h-0.5 bg-gray-300"></div>
+                <div class="step-dot w-8 h-8 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-medium" data-step="3">3</div>
+                <div class="step-line w-12 h-0.5 bg-gray-300"></div>
+                <div class="step-dot w-8 h-8 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-medium" data-step="4">4</div>
+            </div>
+
+            <!-- Step 1: Printer IP -->
+            <div id="step-1" class="step-content">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Printer Connection</h2>
+                <p class="text-gray-500 mb-6">Enter your Ultimaker printer's IP address to get started.</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Printer IP Address</label>
+                        <input type="text" id="printer-ip" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 10.0.0.134">
+                    </div>
+                    <div id="step1-error" class="text-red-600 text-sm hidden"></div>
+                    <div id="step1-test" class="text-sm hidden"></div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button onclick="nextStep(1)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Auth Request -->
+            <div id="step-2" class="step-content hidden">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Authorize UltiUI</h2>
+                <p class="text-gray-500 mb-6">UltiUI needs permission to access your printer's API. Click the button below to send an authorization request.</p>
+                <div class="space-y-4">
+                    <button onclick="requestAuth()" id="auth-request-btn" class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                        Request Authorization
+                    </button>
+                    <div id="auth-waiting" class="hidden text-center py-6">
+                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p class="text-gray-600">Waiting for approval on printer...</p>
+                        <p class="text-gray-400 text-sm mt-2">Please check your printer's touchscreen and approve the request.</p>
+                        <button onclick="checkAuthStatus()" class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
+                            Check Status
+                        </button>
+                    </div>
+                    <div id="auth-success" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 text-green-700 text-sm">
+                        Authorization granted!
+                    </div>
+                    <div id="step2-error" class="text-red-600 text-sm hidden"></div>
+                </div>
+                <div class="mt-8 flex justify-between">
+                    <button onclick="prevStep(2)" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Back</button>
+                    <button onclick="nextStep(2)" id="step2-next" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium hidden">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Test Connection -->
+            <div id="step-3" class="step-content hidden">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Test Connection</h2>
+                <p class="text-gray-500 mb-6">Verifying the connection to your printer.</p>
+                <div class="space-y-3">
+                    <div id="test-printer" class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+                        <div class="test-icon w-5 h-5 rounded-full bg-gray-300 flex-shrink-0"></div>
+                        <span class="text-gray-700">Printer reachable</span>
+                    </div>
+                    <div id="test-auth" class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+                        <div class="test-icon w-5 h-5 rounded-full bg-gray-300 flex-shrink-0"></div>
+                        <span class="text-gray-700">API authorization</span>
+                    </div>
+                    <div id="test-print-job" class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+                        <div class="test-icon w-5 h-5 rounded-full bg-gray-300 flex-shrink-0"></div>
+                        <span class="text-gray-700">Print job API accessible</span>
+                    </div>
+                </div>
+                <div id="step3-error" class="text-red-600 text-sm mt-4 hidden"></div>
+                <div class="mt-8 flex justify-between">
+                    <button onclick="prevStep(3)" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Back</button>
+                    <button onclick="runTests()" id="run-tests-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Run Tests</button>
+                    <button onclick="nextStep(3)" id="step3-next" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium hidden">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Complete -->
+            <div id="step-4" class="step-content hidden">
+                <div class="text-center py-6">
+                    <div class="text-5xl mb-4">&#10003;</div>
+                    <h2 class="text-xl font-semibold text-gray-900 mb-2">Setup Complete!</h2>
+                    <p class="text-gray-500 mb-6">UltiUI is ready to use. You can now log in and start monitoring your printer.</p>
+                    <a href="/login" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                        Go to Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            printerIp: '',
+            authId: '',
+            authKey: '',
+            authCheckInterval: null,
+        };
+
+        function showStep(n) {
+            document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`step-${n}`).classList.remove('hidden');
+            document.querySelectorAll('.step-dot').forEach(dot => {
+                const step = parseInt(dot.dataset.step);
+                dot.classList.remove('bg-blue-600', 'text-white', 'bg-gray-300', 'text-gray-500');
+                if (step < n) {
+                    dot.classList.add('bg-green-500', 'text-white');
+                } else if (step === n) {
+                    dot.classList.add('bg-blue-600', 'text-white');
+                } else {
+                    dot.classList.add('bg-gray-300', 'text-gray-500');
+                }
+            });
+        }
+
+        function nextStep(current) {
+            if (current === 1) {
+                const ip = document.getElementById('printer-ip').value.trim();
+                if (!ip) {
+                    showError('step1-error', 'Please enter a printer IP address');
+                    return;
+                }
+                state.printerIp = ip;
+                hideError('step1-error');
+            }
+            if (current === 2) {
+                if (!state.authId) {
+                    return;
+                }
+            }
+            if (current === 3) {
+                // all tests passed, save and proceed
+                saveAndFinish();
+                return;
+            }
+            showStep(current + 1);
+        }
+
+        function prevStep(current) {
+            showStep(current - 1);
+        }
+
+        function showError(id, msg) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        function hideError(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function requestAuth() {
+            const btn = document.getElementById('auth-request-btn');
+            btn.disabled = true;
+            btn.textContent = 'Sending request...';
+            hideError('step2-error');
+
+            fetch('/api/setup/auth-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ printer_ip: state.printerIp })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.id && data.key) {
+                    state.authId = data.id;
+                    state.authKey = data.key;
+                    btn.classList.add('hidden');
+                    document.getElementById('auth-waiting').classList.remove('hidden');
+                    startAuthPolling();
+                } else {
+                    showError('step2-error', data.error || 'Failed to request authorization');
+                    btn.disabled = false;
+                    btn.textContent = 'Request Authorization';
+                }
+            })
+            .catch(err => {
+                showError('step2-error', 'Network error: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Request Authorization';
+            });
+        }
+
+        function startAuthPolling() {
+            if (state.authCheckInterval) clearInterval(state.authCheckInterval);
+            state.authCheckInterval = setInterval(checkAuthStatus, 3000);
+            checkAuthStatus();
+        }
+
+        function checkAuthStatus() {
+            fetch(`/api/setup/auth-status/${state.authId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'authorized') {
+                        clearInterval(state.authCheckInterval);
+                        state.authCheckInterval = null;
+                        document.getElementById('auth-waiting').classList.add('hidden');
+                        document.getElementById('auth-success').classList.remove('hidden');
+                        document.getElementById('step2-next').classList.remove('hidden');
+                    } else if (data.status === 'unauthorized') {
+                        clearInterval(state.authCheckInterval);
+                        state.authCheckInterval = null;
+                        showError('step2-error', 'Authorization was denied on the printer.');
+                        document.getElementById('auth-waiting').classList.add('hidden');
+                        document.getElementById('auth-request-btn').classList.remove('hidden');
+                        document.getElementById('auth-request-btn').disabled = false;
+                        document.getElementById('auth-request-btn').textContent = 'Request Authorization';
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function runTests() {
+            const btn = document.getElementById('run-tests-btn');
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+            hideError('step3-error');
+
+            const tests = [
+                { id: 'test-printer', label: 'Printer reachable', url: '/api/test-connection' },
+                { id: 'test-auth', label: 'API authorization', url: `/api/print-job` },
+                { id: 'test-print-job', label: 'Print job API', url: `/api/print-job` },
+            ];
+
+            let completed = 0;
+            tests.forEach(test => {
+                fetch(test.url)
+                    .then(r => {
+                        const el = document.querySelector(`#${test.id} .test-icon`);
+                        const text = document.querySelector(`#${test.id} span`);
+                        if (r.ok || r.status === 404) {
+                            el.classList.remove('bg-gray-300', 'bg-red-500');
+                            el.classList.add('bg-green-500');
+                            text.classList.remove('text-gray-700');
+                            text.classList.add('text-green-700');
+                        } else {
+                            el.classList.remove('bg-gray-300', 'bg-green-500');
+                            el.classList.add('bg-red-500');
+                            text.classList.remove('text-gray-700');
+                            text.classList.add('text-red-700');
+                        }
+                    })
+                    .catch(() => {
+                        const el = document.querySelector(`#${test.id} .test-icon`);
+                        const text = document.querySelector(`#${test.id} span`);
+                        el.classList.remove('bg-gray-300', 'bg-green-500');
+                        el.classList.add('bg-red-500');
+                        text.classList.remove('text-gray-700');
+                        text.classList.add('text-red-700');
+                    })
+                    .finally(() => {
+                        completed++;
+                        if (completed === tests.length) {
+                            btn.classList.add('hidden');
+                            document.getElementById('step3-next').classList.remove('hidden');
+                        }
+                    });
+            });
+        }
+
+        function saveAndFinish() {
+            fetch('/api/setup/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    printer_ip: state.printerIp,
+                    auth_id: state.authId,
+                    auth_key: state.authKey
+                })
+            })
+            .then(r => r.json())
+            .then(() => showStep(4))
+            .catch(() => showStep(4));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/api/setup/status')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.printer_ip) {
+                        document.getElementById('printer-ip').value = data.printer_ip;
+                        state.printerIp = data.printer_ip;
+                    }
+                })
+                .catch(() => {});
+        });
+    </script>
+</body>
+</html>

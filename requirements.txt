@@ -1,0 +1,23 @@
+# Core web server dependencies
+aiohttp==3.9.3
+aiohttp-cors==0.7.0
+python-dotenv==1.0.1
+aiohttp-jinja2>=1.5.0
+jinja2>=3.1.0
+aiohttp-session>=2.12.0
+requests>=2.31.0
+numpy>=1.24.0
+cryptography>=41.0.0
+
+# Optional: Desktop probe report visualizer
+# pip install -r requirements.txt[ref]
+# PySide6>=6.5.0
+# PyQt6>=6.5.0
+# matplotlib>=3.7.0
+
+# Optional: Development tools
+# pip install -r requirements.txt[dev]
+# pytest>=7.0
+# pytest-asyncio>=0.21
+# ruff>=0.1.0
+# mypy>=1.0

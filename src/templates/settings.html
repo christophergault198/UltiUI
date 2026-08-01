@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
+
+    <!-- Printer Configuration -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Printer Configuration</h2>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Printer IP Address</label>
+                <div class="flex space-x-2">
+                    <input type="text" id="settings-printer-ip" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="10.0.0.134">
+                    <button onclick="savePrinterIp()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Save</button>
+                </div>
+                <p id="settings-ip-status" class="text-sm mt-1 hidden"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Printer API Authorization</label>
+                <p id="auth-status-text" class="text-sm text-gray-500">Checking...</p>
+                <button onclick="reauthorize()" class="mt-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">Re-authorize</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Credentials -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Login Credentials</h2>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+            <div>
+                <form id="credentials-form" onsubmit="saveCredentials(event)">
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Username</label>
+                        <input type="text" id="current-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">New Username</label>
+                        <input type="text" id="new-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                        <input type="password" id="current-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                        <input type="password" id="new-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                        <input type="password" id="confirm-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <p id="credentials-status" class="text-sm mt-2 hidden"></p>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">Update Credentials</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Defaults -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Reset</h2>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+            <div class="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div>
+                    <p class="text-sm font-medium text-yellow-800">Reset Printer Authorization</p>
+                    <p class="text-xs text-yellow-600">Clears API credentials so you can re-authorize</p>
+                </div>
+                <button onclick="resetAuth()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm font-medium">Reset</button>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div>
+                    <p class="text-sm font-medium text-red-800">Reset All Settings to Defaults</p>
+                    <p class="text-xs text-red-600">Clears printer IP, auth, and resets login to admin/admin</p>
+                </div>
+                <button onclick="resetAll()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">Reset All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup Wizard -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Setup Wizard</h2>
+        </div>
+        <div class="px-6 py-4">
+            <p class="text-sm text-gray-500 mb-3">Run the setup wizard again to walk through the full configuration process.</p>
+            <a href="/setup" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">Open Setup Wizard</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadSettings() {
+        fetch('/api/setup/status')
+            .then(r => r.json())
+            .then(data => {
+                if (data.printer_ip) {
+                    document.getElementById('settings-printer-ip').value = data.printer_ip;
+                }
+                if (data.login_username) {
+                    document.getElementById('current-username').value = data.login_username;
+                }
+                const authText = document.getElementById('auth-status-text');
+                if (data.auth_configured) {
+                    authText.textContent = 'Authorized';
+                    authText.className = 'text-sm text-green-600 font-medium';
+                } else {
+                    authText.textContent = 'Not configured';
+                    authText.className = 'text-sm text-red-600 font-medium';
+                }
+            });
+    }
+
+    function saveCredentials(event) {
+        event.preventDefault();
+        const statusEl = document.getElementById('credentials-status');
+        const currentUser = document.getElementById('current-username').value;
+        const newUser = document.getElementById('new-username').value.trim();
+        const curPass = document.getElementById('current-password').value;
+        const newPass = document.getElementById('new-password').value;
+        const confirmPass = document.getElementById('confirm-password').value;
+
+        if (!newUser || !curPass || !newPass || !confirmPass) {
+            showCredStatus('All fields are required', 'red');
+            return;
+        }
+        if (newPass !== confirmPass) {
+            showCredStatus('New passwords do not match', 'red');
+            return;
+        }
+
+        fetch('/api/settings/credentials/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser, password: curPass })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.valid) {
+                showCredStatus('Current password is incorrect', 'red');
+                return;
+            }
+            fetch('/api/settings/credentials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: newUser, password: newPass })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showCredStatus('Credentials updated! Log out and log back in with your new credentials.', 'green');
+                    document.getElementById('current-username').value = newUser;
+                    document.getElementById('new-username').value = '';
+                    document.getElementById('current-password').value = '';
+                    document.getElementById('new-password').value = '';
+                    document.getElementById('confirm-password').value = '';
+                } else {
+                    showCredStatus(data.error || 'Failed to update credentials', 'red');
+                }
+            });
+        })
+        .catch(() => showCredStatus('Network error', 'red'));
+    }
+
+    function showCredStatus(msg, color) {
+        const el = document.getElementById('credentials-status');
+        el.textContent = msg;
+        el.className = 'text-sm mt-2 ' + (color === 'red' ? 'text-red-600' : 'text-green-600');
+        el.classList.remove('hidden');
+    }
+
+    function savePrinterIp() {
+        const ip = document.getElementById('settings-printer-ip').value.trim();
+        if (!ip) return;
+        fetch('/api/setup/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ printer_ip: ip })
+        })
+        .then(r => r.json())
+        .then(data => {
+            const status = document.getElementById('settings-ip-status');
+            status.textContent = 'Saved!';
+            status.className = 'text-sm text-green-600 mt-1';
+            status.classList.remove('hidden');
+            setTimeout(() => status.classList.add('hidden'), 3000);
+        });
+    }
+
+    function reauthorize() {
+        window.location.href = '/setup';
+    }
+
+    function resetAuth() {
+        if (!confirm('Reset printer authorization? You will need to re-authorize on the printer.')) return;
+        fetch('/api/setup/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'auth' })
+        })
+        .then(r => r.json())
+        .then(() => loadSettings());
+    }
+
+    function resetAll() {
+        if (!confirm('Reset ALL settings to defaults? This will clear the printer IP and auth credentials.')) return;
+        if (!confirm('Are you sure? You will need to run the setup wizard again.')) return;
+        fetch('/api/setup/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'all' })
+        })
+        .then(r => r.json())
+        .then(() => {
+            loadSettings();
+            document.getElementById('settings-printer-ip').value = '';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+{% endblock %}

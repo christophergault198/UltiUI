@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Diagnostics{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Print Diagnostics</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
+            <div class="text-sm text-gray-500 mb-2">Overall Health</div>
+            <div style="position:relative;width:120px;height:120px;margin:0 auto">
+                <svg viewBox="0 0 120 120" width="120" height="120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-width="10" opacity="0.1"/>
+                    <circle id="diag-health-arc" cx="60" cy="60" r="50" fill="none" stroke-width="10" stroke-linecap="round"
+                        style="stroke-dasharray: 0 315; stroke: #22c55e; transform: rotate(-90deg); transform-origin: 60px 60px; transition: stroke-dasharray 0.5s, stroke 0.5s;"/>
+                </svg>
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+                    <span id="diag-score" class="text-3xl font-bold" style="color:#22c55e">--</span>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Component Scores</h3>
+            <div class="space-y-3" id="diag-components">
+                <div><div class="flex justify-between text-sm mb-1"><span>Temperature</span><span id="d-temp" class="font-medium">--</span></div><div class="h-2 bg-gray-200 rounded-full"><div id="d-temp-bar" class="h-full rounded-full bg-blue-500" style="width:0%"></div></div></div>
+                <div><div class="flex justify-between text-sm mb-1"><span>Printer Status</span><span id="d-status" class="font-medium">--</span></div><div class="h-2 bg-gray-200 rounded-full"><div id="d-status-bar" class="h-full rounded-full bg-blue-500" style="width:0%"></div></div></div>
+                <div><div class="flex justify-between text-sm mb-1"><span>Progress</span><span id="d-progress" class="font-medium">--</span></div><div class="h-2 bg-gray-200 rounded-full"><div id="d-progress-bar" class="h-full rounded-full bg-blue-500" style="width:0%"></div></div></div>
+                <div><div class="flex justify-between text-sm mb-1"><span>Material</span><span id="d-material" class="font-medium">--</span></div><div class="h-2 bg-gray-200 rounded-full"><div id="d-material-bar" class="h-full rounded-full bg-blue-500" style="width:0%"></div></div></div>
+                <div><div class="flex justify-between text-sm mb-1"><span>Errors</span><span id="d-errors" class="font-medium">--</span></div><div class="h-2 bg-gray-200 rounded-full"><div id="d-errors-bar" class="h-full rounded-full bg-blue-500" style="width:0%"></div></div></div>
+                <div><div class="flex justify-between text-sm mb-1"><span>Print Cores</span><span id="d-cores" class="font-medium">--</span></div><div class="h-2 bg-gray-200 rounded-full"><div id="d-cores-bar" class="h-full rounded-full bg-blue-500" style="width:0%"></div></div></div>
+                <div><div class="flex justify-between text-sm mb-1"><span>Calibration</span><span id="d-cal" class="font-medium">--</span></div><div class="h-2 bg-gray-200 rounded-full"><div id="d-cal-bar" class="h-full rounded-full bg-blue-500" style="width:0%"></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Active Issues</h3>
+        <div id="diag-issues" class="text-sm text-gray-500">No issues detected</div>
+    </div>
+</div>
+
+<script>
+    async function loadDiagnostics() {
+        try {
+            const resp = await fetch('/api/health-score');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const score = data.score;
+
+            document.getElementById('diag-score').textContent = score;
+            const arc = document.getElementById('diag-health-arc');
+            const circ = Math.PI * 2 * 50;
+            arc.style.strokeDasharray = `${circ * score / 100} ${circ}`;
+            let color = '#22c55e';
+            if (score < 60) color = '#ef4444';
+            else if (score < 80) color = '#f59e0b';
+            arc.style.stroke = color;
+            document.getElementById('diag-score').style.color = color;
+
+            const comps = data.components || {};
+            const updateComp = (id, barId, val) => {
+                document.getElementById(id).textContent = val ?? '--';
+                const bar = document.getElementById(barId);
+                const pct = val ?? 0;
+                bar.style.width = pct + '%';
+                if (pct < 60) bar.className = 'h-full rounded-full bg-red-500';
+                else if (pct < 80) bar.className = 'h-full rounded-full bg-yellow-500';
+                else bar.className = 'h-full rounded-full bg-blue-500';
+            };
+            updateComp('d-temp', 'd-temp-bar', comps.temperature);
+            updateComp('d-status', 'd-status-bar', comps.status);
+            updateComp('d-progress', 'd-progress-bar', comps.progress);
+            updateComp('d-material', 'd-material-bar', comps.material);
+            updateComp('d-errors', 'd-errors-bar', comps.errors);
+            updateComp('d-cores', 'd-cores-bar', comps.cores);
+            updateComp('d-cal', 'd-cal-bar', comps.calibration);
+
+            const issuesEl = document.getElementById('diag-issues');
+            if (data.issues && data.issues.length > 0) {
+                issuesEl.innerHTML = '<ul class="list-disc pl-4 space-y-1">' + data.issues.map(i => `<li class="text-red-600">${i}</li>`).join('') + '</ul>';
+            } else {
+                issuesEl.innerHTML = '<span class="text-green-600">All systems nominal</span>';
+            }
+        } catch (e) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDiagnostics();
+        setInterval(loadDiagnostics, 5000);
+    });
+</script>
+{% endblock %}
