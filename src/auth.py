@@ -67,6 +67,18 @@ async def login_required(request):
     return None
 
 
+def _safe_redirect_target(raw: str) -> str:
+    """Only allow redirecting to a local path after login, never an external URL.
+
+    Rejects protocol-relative ("//evil.com") and absolute-with-scheme
+    ("https://evil.com") targets to prevent open-redirect abuse of the
+    login flow.
+    """
+    if not raw or not raw.startswith('/') or raw.startswith('//'):
+        return '/'
+    return raw
+
+
 async def login_handler(request):
     try:
         data = await request.post()
@@ -80,7 +92,7 @@ async def login_handler(request):
             import time
             session['last_activity'] = time.time()
 
-            redirect_to = request.query.get('redirect', '/')
+            redirect_to = _safe_redirect_target(request.query.get('redirect', '/'))
             return web.HTTPFound(redirect_to)
         else:
             return aiohttp_jinja2.render_template(

@@ -102,11 +102,14 @@ def reset_printer_auth():
 
 
 def reset_all():
+    # Note: ULTIUI_SECRET_KEY is intentionally left untouched here. Resetting
+    # it to a fixed/known value would make session cookies forgeable; if it
+    # needs to change, config.get_secret_key() generates a fresh random one
+    # whenever the key is missing.
     write_env({
         'PRINTER_IP': '',
         'PRINTER_AUTH_USERNAME': '',
         'PRINTER_AUTH_PASSWORD': '',
         'ULTIUI_USERNAME': 'admin',
         'ULTIUI_PASSWORD': 'admin',
-        'ULTIUI_SECRET_KEY': 'your-secret-key-here',
     })

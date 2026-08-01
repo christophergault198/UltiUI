@@ -9,7 +9,6 @@ description = "Web-based Human Machine Interface for Ultimaker S3 printers"
 requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.9.3",
-    "aiohttp-cors>=0.7.0",
     "python-dotenv>=1.0.1",
     "aiohttp-jinja2>=1.5.0",
     "jinja2>=3.1.0",
@@ -49,3 +48,4 @@ exclude = ["ref/"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["src"]
