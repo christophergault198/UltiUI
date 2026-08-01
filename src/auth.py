@@ -20,7 +20,12 @@ def _make_aes_key(secret: str) -> bytes:
 def get_session_storage():
     secret = get_secret_key()
     aes_key = _make_aes_key(secret)
-    return EncryptedCookieStorage(aes_key, max_age=SESSION_MAX_AGE)
+    # httponly defaults to True upstream (JS can't read the cookie). secure
+    # is intentionally left unset: this app is served over plain HTTP on
+    # the LAN, and a Secure cookie would simply never be sent. SameSite is
+    # pinned explicitly (rather than relying on browser-default handling)
+    # as defense in depth alongside the same-origin-only CORS policy.
+    return EncryptedCookieStorage(aes_key, max_age=SESSION_MAX_AGE, samesite='Lax')
 
 
 def get_credentials():
@@ -67,6 +72,18 @@ async def login_required(request):
     return None
 
 
+def _safe_redirect_target(raw: str) -> str:
+    """Only allow redirecting to a local path after login, never an external URL.
+
+    Rejects protocol-relative ("//evil.com") and absolute-with-scheme
+    ("https://evil.com") targets to prevent open-redirect abuse of the
+    login flow.
+    """
+    if not raw or not raw.startswith('/') or raw.startswith('//'):
+        return '/'
+    return raw
+
+
 async def login_handler(request):
     try:
         data = await request.post()
@@ -80,7 +97,7 @@ async def login_handler(request):
             import time
             session['last_activity'] = time.time()
 
-            redirect_to = request.query.get('redirect', '/')
+            redirect_to = _safe_redirect_target(request.query.get('redirect', '/'))
             return web.HTTPFound(redirect_to)
         else:
             return aiohttp_jinja2.render_template(
@@ -88,12 +105,15 @@ async def login_handler(request):
                 request,
                 {'error': 'Invalid username or password'}
             )
-    except Exception as e:
+    except Exception:
+        # Log the full exception server-side, but never show internal
+        # details (paths, exception text) on the login page - this is the
+        # one page an unauthenticated visitor can always reach.
         logger.exception('Login error')
         return aiohttp_jinja2.render_template(
             'login.html',
             request,
-            {'error': f'Login error: {str(e)}'}
+            {'error': 'Login error - please try again'}
         )
 
 
