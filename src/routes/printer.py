@@ -178,6 +178,193 @@ async def control_print_job(request):
     )
 
 
+# --- Manual controls: temperature setpoints and head jog/home -----------
+#
+# These are the only controls in this module that can make the printer's
+# nozzle/bed heat up or the gantry move on its own, so they get extra
+# validation (clamped ranges) and, for movement, a hard safety guard
+# against moving the head while a print is physically on the bed.
+
+BED_TEMP_RANGE = (0.0, 120.0)
+NOZZLE_TEMP_RANGE = (0.0, 280.0)
+JOG_MAX_STEP_MM = 50.0
+JOG_DEFAULT_SPEED_MM_S = 30.0  # deliberately slower than the API's own
+# default (150mm/s) since a human is watching and jogging interactively.
+
+# print_job.state values that mean a job is physically present on the bed
+# (printing, paused, or in one of the surrounding transitional states).
+# Anything other than "no job at all" blocks head movement - fail safe
+# rather than trying to enumerate every state that's "probably fine".
+_JOG_UNSAFE_PRINT_STATES = {
+    'printing', 'pausing', 'paused', 'resuming',
+    'pre_print', 'post_print', 'wait_cleanup', 'wait_user_action',
+}
+
+
+def _clamp(value: float, bounds: tuple) -> float:
+    low, high = bounds
+    return max(low, min(high, value))
+
+
+async def _current_print_job_state():
+    """Return the printer's print_job state, or None if there's no job."""
+    session = await get_printer_session()
+    try:
+        async with session.get(f'http://{_get_printer_ip()}/api/v1/print_job') as response:
+            if response.status == 200:
+                data = await response.json()
+                return data.get('state')
+    except Exception:
+        logger.exception('Failed to check print job state before a movement command')
+        return 'unknown'  # fail safe: treat "couldn't check" as unsafe
+    return None
+
+
+async def _reject_if_unsafe_to_move():
+    """Return a 409 JSON response if it's not safe to home/jog right now,
+    otherwise None."""
+    state = await _current_print_job_state()
+    if state in _JOG_UNSAFE_PRINT_STATES or state == 'unknown':
+        return web.json_response(
+            {'error': f'Refusing to move the head while a print job is active (state: {state})'},
+            status=409
+        )
+    return None
+
+
+@routes.put('/api/printer/bed/temperature')
+@require_printer_ip
+@error_handler
+async def set_bed_temperature(request):
+    data = await request.json()
+    temperature = _clamp(float(data.get('temperature', 0)), BED_TEMP_RANGE)
+    loop = asyncio.get_event_loop()
+    resp = await loop.run_in_executor(
+        None,
+        lambda: requests.put(
+            f'http://{_get_printer_ip()}/api/v1/printer/bed/temperature/target',
+            json=temperature,
+            auth=_digest_auth(),
+            timeout=10
+        )
+    )
+    if resp.status_code in (200, 204):
+        logger.info('Bed temperature set to %.1f', temperature)
+        return web.json_response({'status': 'ok', 'temperature': temperature})
+    return web.json_response(
+        {'error': f'Failed to set bed temperature: {resp.status_code}', 'detail': resp.text},
+        status=resp.status_code
+    )
+
+
+@routes.put('/api/printer/extruder/{extruder_id}/temperature')
+@require_printer_ip
+@error_handler
+async def set_extruder_temperature(request):
+    extruder_id = request.match_info['extruder_id']
+    if extruder_id not in ('0', '1'):
+        return web.json_response({'error': 'Invalid extruder id'}, status=400)
+    data = await request.json()
+    temperature = _clamp(float(data.get('temperature', 0)), NOZZLE_TEMP_RANGE)
+    loop = asyncio.get_event_loop()
+    resp = await loop.run_in_executor(
+        None,
+        lambda: requests.put(
+            f'http://{_get_printer_ip()}/api/v1/printer/heads/0/extruders/{extruder_id}/hotend/temperature/target',
+            json=temperature,
+            auth=_digest_auth(),
+            timeout=10
+        )
+    )
+    if resp.status_code in (200, 204):
+        logger.info('Extruder %s temperature set to %.1f', extruder_id, temperature)
+        return web.json_response({'status': 'ok', 'temperature': temperature})
+    return web.json_response(
+        {'error': f'Failed to set extruder temperature: {resp.status_code}', 'detail': resp.text},
+        status=resp.status_code
+    )
+
+
+@routes.post('/api/printer/home')
+@require_printer_ip
+@error_handler
+async def home_printer(request):
+    unsafe = await _reject_if_unsafe_to_move()
+    if unsafe:
+        return unsafe
+    loop = asyncio.get_event_loop()
+    resp = await loop.run_in_executor(
+        None,
+        lambda: requests.post(
+            f'http://{_get_printer_ip()}/api/v1/printer/heads/0/position',
+            json='home',
+            auth=_digest_auth(),
+            timeout=15
+        )
+    )
+    if resp.status_code in (200, 204):
+        logger.info('Head homed')
+        return web.json_response({'status': 'ok'})
+    return web.json_response(
+        {'error': f'Failed to home head: {resp.status_code}', 'detail': resp.text},
+        status=resp.status_code
+    )
+
+
+@routes.post('/api/printer/jog')
+@require_printer_ip
+@error_handler
+async def jog_printer(request):
+    data = await request.json()
+    axis = data.get('axis')
+    if axis not in ('x', 'y', 'z'):
+        return web.json_response({'error': "axis must be 'x', 'y', or 'z'"}, status=400)
+    try:
+        delta = float(data.get('delta', 0))
+    except (TypeError, ValueError):
+        return web.json_response({'error': 'delta must be a number'}, status=400)
+    delta = max(-JOG_MAX_STEP_MM, min(JOG_MAX_STEP_MM, delta))
+
+    unsafe = await _reject_if_unsafe_to_move()
+    if unsafe:
+        return unsafe
+
+    session = await get_printer_session()
+    async with session.get(f'http://{_get_printer_ip()}/api/v1/printer/heads/0/position') as response:
+        if response.status != 200:
+            return web.json_response(
+                {'error': f'Could not read current head position: {response.status}'},
+                status=502
+            )
+        current = await response.json()
+
+    target = {
+        'x': current.get('x', 0),
+        'y': current.get('y', 0),
+        'z': current.get('z', 0),
+        'speed': JOG_DEFAULT_SPEED_MM_S,
+    }
+    target[axis] = target[axis] + delta
+
+    loop = asyncio.get_event_loop()
+    resp = await loop.run_in_executor(
+        None,
+        lambda: requests.put(
+            f'http://{_get_printer_ip()}/api/v1/printer/heads/0/position',
+            json=target,
+            auth=_digest_auth(),
+            timeout=15
+        )
+    )
+    if resp.status_code in (200, 204):
+        logger.info('Jogged %s by %.2fmm', axis, delta)
+        return web.json_response({'status': 'ok', 'axis': axis, 'target': target[axis]})
+    return web.json_response(
+        {'error': f'Failed to jog head: {resp.status_code}', 'detail': resp.text},
+        status=resp.status_code
+    )
+
+
 @routes.get('/api/print-cores')
 @require_printer_ip
 async def get_print_cores(request):

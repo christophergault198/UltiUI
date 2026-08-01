@@ -349,6 +349,67 @@
                 </div>
             </div>
 
+            <!-- 3b. Manual Controls Section -->
+            <div class="section-controls bg-white rounded-lg shadow-md p-5 mb-5">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">Manual Controls</h2>
+                    <span id="controls-lock-notice" class="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hidden">Locked while printing</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Temperature setpoints -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-800 mb-3">Temperature</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <label for="bed-temp-input" class="text-sm text-gray-600 w-20 flex-shrink-0">Bed</label>
+                                <input type="number" id="bed-temp-input" min="0" max="120" step="1" placeholder="°C"
+                                    class="w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <button id="bed-temp-set" class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">Set</button>
+                                <span id="bed-temp-result" class="text-xs text-gray-400"></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <label for="ext0-temp-input" class="text-sm text-gray-600 w-20 flex-shrink-0">Extruder 1</label>
+                                <input type="number" id="ext0-temp-input" min="0" max="280" step="1" placeholder="°C"
+                                    class="w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <button id="ext0-temp-set" class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">Set</button>
+                                <span id="ext0-temp-result" class="text-xs text-gray-400"></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <label for="ext1-temp-input" class="text-sm text-gray-600 w-20 flex-shrink-0">Extruder 2</label>
+                                <input type="number" id="ext1-temp-input" min="0" max="280" step="1" placeholder="°C"
+                                    class="w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <button id="ext1-temp-set" class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">Set</button>
+                                <span id="ext1-temp-result" class="text-xs text-gray-400"></span>
+                            </div>
+                            <p class="text-xs text-gray-500">Bed: 0-120°C. Nozzle: 0-280°C. Set to 0 to turn a heater off.</p>
+                        </div>
+                    </div>
+
+                    <!-- Jog controls -->
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-lg font-medium text-gray-800">Head Position</h3>
+                            <select id="jog-step" class="text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="0.1">0.1 mm</option>
+                                <option value="1" selected>1 mm</option>
+                                <option value="10">10 mm</option>
+                            </select>
+                        </div>
+                        <div class="jog-pad">
+                            <button class="jog-btn" data-axis="y" data-dir="1" style="grid-area: yplus" aria-label="Move Y+">Y+</button>
+                            <button class="jog-btn" data-axis="x" data-dir="-1" style="grid-area: xminus" aria-label="Move X-">X-</button>
+                            <button id="jog-home" class="jog-btn jog-home" style="grid-area: home">Home</button>
+                            <button class="jog-btn" data-axis="x" data-dir="1" style="grid-area: xplus" aria-label="Move X+">X+</button>
+                            <button class="jog-btn" data-axis="y" data-dir="-1" style="grid-area: yminus" aria-label="Move Y-">Y-</button>
+                            <button class="jog-btn" data-axis="z" data-dir="1" style="grid-area: zplus" aria-label="Move Z+">Z+</button>
+                            <button class="jog-btn" data-axis="z" data-dir="-1" style="grid-area: zminus" aria-label="Move Z-">Z-</button>
+                        </div>
+                        <p id="jog-status" class="text-xs text-gray-500 mt-2">Only available when the printer is idle (no active print job).</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- 4. Material Manager Section -->
             <div class="section-material bg-white rounded-lg shadow-md p-5 mb-5">
                 <div class="flex justify-between items-center mb-6">

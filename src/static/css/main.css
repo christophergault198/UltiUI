@@ -346,6 +346,63 @@
             color: #1e293b;
         }
 
+        /* Manual head-jog control pad */
+        .jog-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 3rem);
+            grid-template-rows: repeat(4, 3rem);
+            grid-template-areas:
+                ".      yplus  ."
+                "xminus home   xplus"
+                ".      yminus ."
+                "zplus  .      zminus";
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        .jog-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .jog-btn:hover:not(:disabled) {
+            background-color: #e5e7eb;
+        }
+        .jog-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .jog-btn.jog-home {
+            grid-area: home;
+            background-color: #dbeafe;
+            border-color: #bfdbfe;
+            color: #1d4ed8;
+            font-size: 0.75rem;
+        }
+        .jog-btn.jog-home:hover:not(:disabled) {
+            background-color: #bfdbfe;
+        }
+        .dark .jog-btn {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+        .dark .jog-btn:hover:not(:disabled) {
+            background-color: #4b5563;
+        }
+        .dark .jog-btn.jog-home {
+            background-color: #1e3a8a;
+            border-color: #1e40af;
+            color: #bfdbfe;
+        }
+
         /* SVG Gauge styles */
         .gauge-container {
             position: relative;
@@ -955,6 +1012,7 @@
                     "camera camera job"
                     "camera camera health"
                     "status status status"
+                    "controls controls controls"
                     "flow flow bedlevel"
                     "material calibration bedlevel"
                     "led led led";
@@ -968,6 +1026,7 @@
             .desktop-layout .section-job { grid-area: job; }
             .desktop-layout .section-health { grid-area: health; }
             .desktop-layout .section-status { grid-area: status; }
+            .desktop-layout .section-controls { grid-area: controls; }
             .desktop-layout .section-flow { grid-area: flow; }
             .desktop-layout .section-bedlevel { grid-area: bedlevel; }
             .desktop-layout .section-material { grid-area: material; }
@@ -1053,6 +1112,15 @@
 }
 .single-layout main > .bg-white:not(.section-camera) {
     overflow-y: auto;
+}
+/* Single-layout is a fixed 100vh kiosk grid with every cell already
+ * spoken for (see the explicit placements below) - there's no room to
+ * add a 5th card without either squeezing something else or silently
+ * clipping content. Manual Controls is an occasional-use utility, not
+ * something you need in an at-a-glance kiosk view, so it's hidden here
+ * and stays available in the default and Desktop layouts. */
+.single-layout .section-controls {
+    display: none;
 }
 .single-layout .section-camera {
     overflow: hidden;

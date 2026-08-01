@@ -506,6 +506,7 @@
                     document.getElementById('bed-target-val').textContent = `Target: ${targetTemp}°`;
                     setTempGauge('bed-gauge', 'bed-gauge-arc', currentTemp, 120);
                     updateTempHistory('bed', currentTemp, targetTemp);
+                    setTemperatureInputDefault('bed-temp-input', targetTemp);
                 }
 
                 if (data.heads && data.heads[0] && data.heads[0].extruders) {
@@ -516,6 +517,7 @@
                         document.getElementById('ext1-target-val').textContent = `Target: ${targetTemp}°`;
                         setTempGauge('ext1-gauge', 'ext1-gauge-arc', currentTemp, 300);
                         updateTempHistory('ext1', currentTemp, targetTemp);
+                        setTemperatureInputDefault('ext0-temp-input', targetTemp);
                     }
                     if (data.heads[0].extruders[1] && data.heads[0].extruders[1].hotend) {
                         const currentTemp = data.heads[0].extruders[1].hotend.temperature.current;
@@ -524,6 +526,7 @@
                         document.getElementById('ext2-target-val').textContent = `Target: ${targetTemp}°`;
                         setTempGauge('ext2-gauge', 'ext2-gauge-arc', currentTemp, 300);
                         updateTempHistory('ext2', currentTemp, targetTemp);
+                        setTemperatureInputDefault('ext1-temp-input', targetTemp);
                     }
                 }
 
@@ -627,26 +630,32 @@
                     document.getElementById('btn-pause').classList.toggle('hidden', state !== 'printing');
                     document.getElementById('btn-resume').classList.toggle('hidden', state !== 'paused');
                     document.getElementById('btn-abort').classList.toggle('hidden', !['printing','paused'].includes(state));
+
+                    // A job is active/present, so jog/home is unsafe - lock the controls.
+                    setJogControlsLocked(true);
                 } else {
                     jobDetails.classList.add('hidden');
                     noJobMessage.classList.remove('hidden');
                     jobStatus.textContent = 'No Job';
                     jobStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800';
-                    
+
                     // Display the message from the server if available
                     if (data.message) {
                         document.getElementById('no-job-message').textContent = data.message;
                     }
+
+                    // No active job - safe to jog/home.
+                    setJogControlsLocked(false);
                 }
 
             } catch (error) {
                 console.error('Error updating print job:', error);
-                
+
                 // Show a user-friendly error message
                 const jobDetails = document.getElementById('job-details');
                 const noJobMessage = document.getElementById('no-job-message');
                 const jobStatus = document.getElementById('job-status');
-                
+
                 jobDetails.classList.add('hidden');
                 noJobMessage.classList.remove('hidden');
                 noJobMessage.textContent = 'Unable to fetch print job information. Please check your connection.';
@@ -655,6 +664,9 @@
                 document.getElementById('print-controls').classList.remove('hidden');
                 jobStatus.textContent = 'Error';
                 jobStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+
+                // Fail safe: if we can't tell what's happening, don't allow head moves.
+                setJogControlsLocked(true);
             }
         }
 
@@ -1988,6 +2000,107 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             loadLedBrightness();
+        });
+
+        // --- Manual Controls: temperature setpoints + head jog/home ---
+        // Jog/home are only safe when there's no print job on the bed. The
+        // backend enforces this too (409 if you try anyway), but disabling
+        // the buttons here avoids people hitting that wall in the first
+        // place.
+        function setJogControlsLocked(locked) {
+            document.querySelectorAll('.jog-btn').forEach(btn => { btn.disabled = locked; });
+            document.getElementById('controls-lock-notice').classList.toggle('hidden', !locked);
+        }
+
+        function setTemperatureInputDefault(inputId, value) {
+            const input = document.getElementById(inputId);
+            // Don't clobber a value the user is actively editing.
+            if (input && document.activeElement !== input && typeof value === 'number') {
+                input.placeholder = `${Math.round(value)}°C`;
+            }
+        }
+
+        async function setTemperature(url, inputId, resultId) {
+            const input = document.getElementById(inputId);
+            const resultEl = document.getElementById(resultId);
+            const temperature = parseFloat(input.value);
+            if (Number.isNaN(temperature)) {
+                resultEl.textContent = 'Enter a number';
+                resultEl.className = 'text-xs text-red-500';
+                return;
+            }
+            resultEl.textContent = 'Setting...';
+            resultEl.className = 'text-xs text-gray-400';
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ temperature }),
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'ok') {
+                    resultEl.textContent = `Set to ${data.temperature}°C`;
+                    resultEl.className = 'text-xs text-green-600';
+                } else {
+                    resultEl.textContent = data.error || 'Failed';
+                    resultEl.className = 'text-xs text-red-500';
+                }
+            } catch (error) {
+                console.error('Error setting temperature:', error);
+                resultEl.textContent = 'Network error';
+                resultEl.className = 'text-xs text-red-500';
+            }
+        }
+
+        document.getElementById('bed-temp-set').addEventListener('click', () => {
+            setTemperature('/api/printer/bed/temperature', 'bed-temp-input', 'bed-temp-result');
+        });
+        document.getElementById('ext0-temp-set').addEventListener('click', () => {
+            setTemperature('/api/printer/extruder/0/temperature', 'ext0-temp-input', 'ext0-temp-result');
+        });
+        document.getElementById('ext1-temp-set').addEventListener('click', () => {
+            setTemperature('/api/printer/extruder/1/temperature', 'ext1-temp-input', 'ext1-temp-result');
+        });
+
+        async function jogAxis(axis, dir) {
+            const step = parseFloat(document.getElementById('jog-step').value) || 1;
+            const jogStatus = document.getElementById('jog-status');
+            jogStatus.textContent = `Moving ${axis.toUpperCase()}...`;
+            try {
+                const response = await fetch('/api/printer/jog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ axis, delta: step * dir }),
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'ok') {
+                    jogStatus.textContent = `${axis.toUpperCase()} now at ${data.target.toFixed(2)}mm`;
+                } else {
+                    jogStatus.textContent = data.error || 'Move failed';
+                }
+            } catch (error) {
+                console.error('Error jogging head:', error);
+                jogStatus.textContent = 'Network error';
+            }
+        }
+
+        document.querySelectorAll('.jog-btn[data-axis]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                jogAxis(btn.dataset.axis, parseFloat(btn.dataset.dir));
+            });
+        });
+
+        document.getElementById('jog-home').addEventListener('click', async () => {
+            const jogStatus = document.getElementById('jog-status');
+            jogStatus.textContent = 'Homing...';
+            try {
+                const response = await fetch('/api/printer/home', { method: 'POST' });
+                const data = await response.json();
+                jogStatus.textContent = (response.ok && data.status === 'ok') ? 'Homed' : (data.error || 'Home failed');
+            } catch (error) {
+                console.error('Error homing head:', error);
+                jogStatus.textContent = 'Network error';
+            }
         });
 
         // Add side menu functionality
