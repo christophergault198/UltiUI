@@ -218,6 +218,7 @@
                         document.getElementById('auth-waiting').classList.add('hidden');
                         document.getElementById('auth-success').classList.remove('hidden');
                         document.getElementById('step2-next').classList.remove('hidden');
+                        saveAuth();
                     } else if (data.status === 'unauthorized') {
                         clearInterval(state.authCheckInterval);
                         state.authCheckInterval = null;
@@ -276,6 +277,18 @@
                             document.getElementById('step3-next').classList.remove('hidden');
                         }
                     });
+            });
+        }
+
+        function saveAuth() {
+            fetch('/api/setup/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    printer_ip: state.printerIp,
+                    auth_id: state.authId,
+                    auth_key: state.authKey
+                })
             });
         }
 

@@ -15,7 +15,7 @@ from aiohttp_session import session_middleware
 from requests.auth import HTTPDigestAuth
 
 from auth import get_credentials, get_session_storage, login_handler, login_page, login_required, logout_handler
-from config import get_printer_ip, get_secret_key
+from config import get_printer_auth, get_printer_ip, get_secret_key
 from event_log_service import EventLogService
 from log_manager import LogManager
 from logger import logger
@@ -39,21 +39,16 @@ config = {
     'tolerance_threshold': 1.0,
 }
 
-printer_auth = {
-    'username': os.getenv('PRINTER_AUTH_USERNAME') or None,
-    'password': os.getenv('PRINTER_AUTH_PASSWORD') or None,
-    'api_key': os.getenv('PRINTER_API_KEY') or None,
-}
-
 
 def _get_printer_ip():
     return get_printer_ip()
 
 
 def _digest_auth():
+    auth = get_printer_auth()
     return HTTPDigestAuth(
-        printer_auth['username'] or 'ultimaker',
-        printer_auth['password'] or ''
+        auth['username'] or 'ultimaker',
+        auth['password'] or ''
     )
 
 
@@ -924,7 +919,7 @@ async def auth_middleware(request, handler):
     if request.path in skip_paths or request.path.startswith('/static/'):
         return await handler(request)
     auth_result = await login_required(request)
-    if auth_result:
+    if auth_result is not None:
         return auth_result
     return await handler(request)
 
