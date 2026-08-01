@@ -100,12 +100,15 @@ async def login_handler(request):
                 request,
                 {'error': 'Invalid username or password'}
             )
-    except Exception as e:
+    except Exception:
+        # Log the full exception server-side, but never show internal
+        # details (paths, exception text) on the login page - this is the
+        # one page an unauthenticated visitor can always reach.
         logger.exception('Login error')
         return aiohttp_jinja2.render_template(
             'login.html',
             request,
-            {'error': f'Login error: {str(e)}'}
+            {'error': 'Login error - please try again'}
         )
 
 

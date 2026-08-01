@@ -20,6 +20,21 @@ async def auth_middleware(request, handler):
     return await handler(request)
 
 
+@web.middleware
+async def security_headers_middleware(request, handler):
+    """Strip/override headers that leak implementation details.
+
+    aiohttp sets a `Server: Python/x.y aiohttp/x.y.z` header on every
+    response (including pre-login pages like /login) unless something
+    else has already set it - this fingerprints the exact Python and
+    aiohttp versions in use to anyone who can reach the app.
+    """
+    response = await handler(request)
+    response.headers['Server'] = 'UltiUI'
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    return response
+
+
 def require_printer_ip(handler):
     @functools.wraps(handler)
     async def wrapper(request):

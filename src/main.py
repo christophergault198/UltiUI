@@ -10,7 +10,7 @@ from config import get_secret_key
 from event_log_service import EventLogService
 from log_manager import LogManager
 from logger import logger
-from middleware import auth_middleware
+from middleware import auth_middleware, security_headers_middleware
 from print_jobs_service import PrintJobsService
 from printer_client import close_printer_session, get_printer_base_url
 from routes import alerts as alerts_routes
@@ -44,6 +44,7 @@ def init_app():
     )
 
     app = web.Application(middlewares=[
+        security_headers_middleware,
         session_middleware(get_session_storage()),
         auth_middleware,
     ])
