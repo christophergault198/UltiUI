@@ -20,7 +20,12 @@ def _make_aes_key(secret: str) -> bytes:
 def get_session_storage():
     secret = get_secret_key()
     aes_key = _make_aes_key(secret)
-    return EncryptedCookieStorage(aes_key, max_age=SESSION_MAX_AGE)
+    # httponly defaults to True upstream (JS can't read the cookie). secure
+    # is intentionally left unset: this app is served over plain HTTP on
+    # the LAN, and a Secure cookie would simply never be sent. SameSite is
+    # pinned explicitly (rather than relying on browser-default handling)
+    # as defense in depth alongside the same-origin-only CORS policy.
+    return EncryptedCookieStorage(aes_key, max_age=SESSION_MAX_AGE, samesite='Lax')
 
 
 def get_credentials():
